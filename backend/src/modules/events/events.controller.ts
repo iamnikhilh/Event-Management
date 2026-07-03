@@ -9,6 +9,7 @@ import {
   Query,
 } from '@nestjs/common';
 
+import { Public } from '../../common/decorators/public.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
 import { CreateEventDto } from './dto/create-event.dto';
@@ -26,21 +27,25 @@ export class EventsController {
     return this.eventsService.create(user.sub, dto);
   }
 
+  @Public()
   @Get()
   list(@Query() query: ListEventsDto) {
     return this.eventsService.list(query);
   }
 
+  @Public()
   @Get('stats')
   stats() {
     return this.eventsService.stats();
   }
 
+  @Public()
   @Get('recent')
   recent(@Query() query: RecentEventsQueryDto) {
     return this.eventsService.recent(query);
   }
 
+  @Public()
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.eventsService.findOne(id);
