@@ -3,6 +3,7 @@ import {
   Injectable,
   NotFoundException,
   UnauthorizedException,
+  BadRequestException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
@@ -12,6 +13,7 @@ import { eq } from 'drizzle-orm';
 import { DATABASE_CONNECTION } from '../../database/database.constants';
 import { Database } from '../../database/database.types';
 import { User, users } from '../../database/schema';
+import { SignupDto } from './dto/signup.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { LoginDto } from './dto/login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
@@ -24,6 +26,35 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
   ) {}
+
+  async signup(dto: SignupDto) {
+    const existingUser = await this.findUserByEmail(dto.email);
+    if (existingUser) {
+      throw new BadRequestException('Email already registered');
+    }
+
+    const passwordHash = await bcrypt.hash(dto.password, 10);
+
+    const [newUser] = await this.db
+      .insert(users)
+      .values({
+        firstName: dto.firstName,
+        lastName: dto.lastName,
+        email: dto.email.toLowerCase(),
+        passwordHash,
+        role: 'organizer',
+      })
+      .returning();
+
+    const tokens = await this.createTokens(newUser);
+    await this.storeRefreshTokenHash(newUser.id, tokens.refreshToken);
+
+    return {
+      user: this.toPublicUser(newUser),
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
+    };
+  }
 
   async login(dto: LoginDto) {
     const user = await this.findUserByEmail(dto.email);
