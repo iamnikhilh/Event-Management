@@ -9,6 +9,7 @@ import {
   Query,
 } from '@nestjs/common';
 
+import { Public } from '../../common/decorators/public.decorator';
 import { CategoriesService } from './categories.service';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { ListCategoriesDto } from './dto/list-categories.dto';
@@ -24,11 +25,13 @@ export class CategoriesController {
   }
 
   @Get()
+  @Public()
   list(@Query() query: ListCategoriesDto) {
     return this.categoriesService.list(query);
   }
 
   @Get(':id')
+  @Public()
   findOne(@Param('id') id: string) {
     return this.categoriesService.findOne(id);
   }
