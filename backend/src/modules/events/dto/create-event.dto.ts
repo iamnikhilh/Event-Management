@@ -6,8 +6,10 @@ import {
   IsString,
   IsUrl,
   IsUUID,
+  IsBoolean,
   Length,
   Min,
+  Matches,
 } from 'class-validator';
 
 import { EventStatus, EventStatusValues } from '../../../database/schema';
@@ -20,6 +22,12 @@ export class CreateEventDto {
   @IsString()
   @Length(10, 5000)
   description!: string;
+
+  @IsString()
+  @Matches(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, {
+    message: 'slug must be lowercase alphanumeric with hyphens only',
+  })
+  slug!: string;
 
   @IsUUID()
   categoryId!: string;
@@ -48,4 +56,8 @@ export class CreateEventDto {
   @IsOptional()
   @IsUrl()
   bannerImage?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  isPublic?: boolean;
 }

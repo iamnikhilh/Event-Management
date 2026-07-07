@@ -26,12 +26,14 @@ export class CategoriesController {
 
   @Public()
   @Get()
+  @Public()
   list(@Query() query: ListCategoriesDto) {
     return this.categoriesService.list(query);
   }
 
   @Public()
   @Get(':id')
+  @Public()
   findOne(@Param('id') id: string) {
     return this.categoriesService.findOne(id);
   }
