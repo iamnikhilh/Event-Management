@@ -13,6 +13,7 @@ import { Database } from '../../database/database.types';
 import { attendees, events, TicketStatusValues, UserRoleValues } from '../../database/schema';
 import { buildPaginationMeta } from '../../common/utils/pagination.util';
 import { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
+import { EmailService } from '../email/email.service';
 import { RegisterAttendeeDto } from './dto/register-attendee.dto';
 import { ListAttendeesDto } from './dto/list-attendees.dto';
 import { UpdateAttendeeDto } from './dto/update-attendee.dto';
@@ -23,6 +24,7 @@ export class AttendeesService {
   constructor(
     @Inject(DATABASE_CONNECTION) private readonly db: Database,
     private readonly ticketTypesService: TicketTypesService,
+    private readonly emailService: EmailService,
   ) {}
 
   private async verifyEventAccess(eventId: string, user: AuthenticatedUser): Promise<void> {
@@ -74,6 +76,26 @@ export class AttendeesService {
 
     if (status === TicketStatusValues.REGISTERED) {
       await this.ticketTypesService.incrementSold(dto.ticketTypeId);
+    }
+
+    // Get event details to include in email
+    const [event] = await this.db
+      .select()
+      .from(events)
+      .where(eq(events.id, eventId))
+      .limit(1);
+
+    // Send confirmation email
+    try {
+      await this.emailService.sendAttendeeConfirmation(
+        dto.email.trim(),
+        dto.fullName.trim(),
+        event?.title || 'Your Event',
+        qrCode,
+      );
+    } catch (error) {
+      console.error('Failed to send confirmation email:', error);
+      // Don't fail registration if email fails
     }
 
     return createdAttendee;
