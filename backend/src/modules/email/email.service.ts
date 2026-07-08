@@ -56,7 +56,8 @@ export class EmailService {
   }
 
   async sendPasswordResetEmail(email: string, resetToken: string): Promise<void> {
-    const resetLink = `${process.env.FRONTEND_URL}/reset-password?token=${resetToken}`;
+    const frontendUrl = this.configService.get<string>('FRONTEND_URL') || 'http://localhost:5173';
+    const resetLink = `${frontendUrl}/reset-password?token=${resetToken}`;
     const html = `
       <h2>Password Reset Request</h2>
       <p>We received a request to reset your password.</p>
@@ -71,6 +72,7 @@ export class EmailService {
   }
 
   async sendWelcomeEmail(email: string, firstName: string): Promise<void> {
+    const frontendUrl = this.configService.get<string>('FRONTEND_URL') || 'http://localhost:5173';
     const html = `
       <h2>Welcome to Eventide!</h2>
       <p>Hi ${firstName},</p>
@@ -82,7 +84,7 @@ export class EmailService {
         <li>Check in attendees with QR codes</li>
         <li>View detailed analytics</li>
       </ul>
-      <p><a href="${process.env.FRONTEND_URL}/dashboard" style="background: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">Go to Dashboard</a></p>
+      <p><a href="${frontendUrl}/dashboard" style="background: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">Go to Dashboard</a></p>
       <p>Best regards,<br/>Eventide Team</p>
     `;
 

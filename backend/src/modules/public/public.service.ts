@@ -21,54 +21,65 @@ export class PublicService {
   constructor(@Inject(DATABASE_CONNECTION) private readonly db: Database) {}
 
   async findAllPublicEvents(query: ListPublicEventsDto) {
-    const { page, limit, search } = query;
-    const offset = (page - 1) * limit;
+    try {
+      const { page, limit, search } = query;
+      const offset = (page - 1) * limit;
 
-    const filters: any[] = [
-      eq(events.isPublic, true),
-      ne(events.status, EventStatusValues.DRAFT),
-    ];
+      const filters: any[] = [
+        eq(events.isPublic, true),
+        ne(events.status, EventStatusValues.DRAFT),
+      ];
 
-    if (search) {
-      filters.push(ilike(events.title, `%${search}%`));
+      if (search) {
+        filters.push(ilike(events.title, `%${search}%`));
+      }
+
+      const whereClause = and(...filters);
+
+      let totalItems = 0;
+      try {
+        const countResult = await this.db
+          .select({ totalItems: count() })
+          .from(events)
+          .where(whereClause);
+
+        totalItems = countResult[0]?.totalItems || 0;
+      } catch (countError) {
+        console.error('Count query error:', countError);
+        totalItems = 0;
+      }
+
+      const data = await this.db
+        .select({
+          id: events.id,
+          title: events.title,
+          description: events.description,
+          slug: events.slug,
+          venue: events.venue,
+          eventDate: events.eventDate,
+          capacity: events.capacity,
+          status: events.status,
+          bannerImage: events.bannerImage,
+          category: {
+            id: categories.id,
+            name: categories.name,
+          },
+        })
+        .from(events)
+        .innerJoin(categories, eq(events.categoryId, categories.id))
+        .where(whereClause)
+        .orderBy(asc(events.eventDate))
+        .limit(limit)
+        .offset(offset);
+
+      return {
+        data,
+        meta: buildPaginationMeta(page, limit, totalItems),
+      };
+    } catch (error) {
+      console.error('findAllPublicEvents error:', error);
+      throw error;
     }
-
-    const whereClause = and(...filters);
-
-    const countResult = await this.db
-      .select({ totalItems: count() })
-      .from(events)
-      .where(whereClause);
-
-    const totalItems = countResult[0]?.totalItems || 0;
-
-    const data = await this.db
-      .select({
-        id: events.id,
-        title: events.title,
-        description: events.description,
-        slug: events.slug,
-        venue: events.venue,
-        eventDate: events.eventDate,
-        capacity: events.capacity,
-        status: events.status,
-        bannerImage: events.bannerImage,
-        category: {
-          id: categories.id,
-          name: categories.name,
-        },
-      })
-      .from(events)
-      .innerJoin(categories, eq(events.categoryId, categories.id))
-      .where(whereClause)
-      .orderBy(asc(events.eventDate))
-      .limit(limit)
-      .offset(offset);
-
-    return {
-      data,
-      meta: buildPaginationMeta(page, limit, totalItems),
-    };
   }
 
   async findPublicEventBySlug(slug: string) {
