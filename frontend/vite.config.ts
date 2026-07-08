@@ -1,7 +1,7 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import tsConfigPaths from "vite-tsconfig-paths";
-import tailwindcss from "tailwindcss";
+import tailwindcss from "@tailwindcss/postcss";
 
 export default defineConfig({
   plugins: [react(), tsConfigPaths()],
