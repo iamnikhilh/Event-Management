@@ -18,6 +18,15 @@ export class HttpExceptionFilter implements ExceptionFilter {
     let message = 'Internal server error';
     let errors: string[] = [];
 
+    // Log the full error for debugging
+    console.error('❌ EXCEPTION CAUGHT:', {
+      type: exception?.constructor?.name,
+      message: exception instanceof Error ? exception.message : String(exception),
+      stack: exception instanceof Error ? exception.stack : undefined,
+      url: request.originalUrl,
+      method: request.method,
+    });
+
     if (exception instanceof HttpException) {
       statusCode = exception.getStatus();
       const exceptionResponse = exception.getResponse();
