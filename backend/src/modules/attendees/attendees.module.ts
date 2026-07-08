@@ -3,9 +3,10 @@ import { Module } from '@nestjs/common';
 import { AttendeesController } from './attendees.controller';
 import { AttendeesService } from './attendees.service';
 import { TicketTypesModule } from '../ticket-types/ticket-types.module';
+import { EmailModule } from '../email/email.module';
 
 @Module({
-  imports: [TicketTypesModule],
+  imports: [TicketTypesModule, EmailModule],
   controllers: [AttendeesController],
   providers: [AttendeesService],
   exports: [AttendeesService],
