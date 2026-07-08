@@ -35,10 +35,12 @@ export class PublicService {
 
     const whereClause = and(...filters);
 
-    const [{ totalItems }] = await this.db
+    const countResult = await this.db
       .select({ totalItems: count() })
       .from(events)
       .where(whereClause);
+
+    const totalItems = countResult[0]?.totalItems || 0;
 
     const data = await this.db
       .select({
