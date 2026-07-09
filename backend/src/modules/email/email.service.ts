@@ -49,7 +49,7 @@ export class EmailService {
       </div>
       <p>Please show this code at check-in. You can take a screenshot or print this email.</p>
       <p>If you have any questions, please contact the event organizer.</p>
-      <p>Best regards,<br/>Eventide Team</p>
+      <p>Best regards,<br/>EventMatrix Team</p>
     `;
 
     await this.sendEmail(email, `Registration Confirmed: ${eventTitle}`, html);
@@ -65,7 +65,7 @@ export class EmailService {
       <p><a href="${resetLink}" style="background: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">Reset Password</a></p>
       <p>This link expires in 1 hour.</p>
       <p>If you didn't request this, please ignore this email.</p>
-      <p>Best regards,<br/>Eventide Team</p>
+      <p>Best regards,<br/>EventMatrix Team</p>
     `;
 
     await this.sendEmail(email, 'Password Reset Request', html);
@@ -74,9 +74,9 @@ export class EmailService {
   async sendWelcomeEmail(email: string, firstName: string): Promise<void> {
     const frontendUrl = this.configService.get<string>('FRONTEND_URL') || 'http://localhost:5173';
     const html = `
-      <h2>Welcome to Eventide!</h2>
+      <h2>Welcome to EventMatrix!</h2>
       <p>Hi ${firstName},</p>
-      <p>Welcome to Eventide - your ultimate event management platform.</p>
+      <p>Welcome to EventMatrix - your ultimate event management platform.</p>
       <p>You can now:</p>
       <ul>
         <li>Create and manage your events</li>
@@ -85,9 +85,9 @@ export class EmailService {
         <li>View detailed analytics</li>
       </ul>
       <p><a href="${frontendUrl}/dashboard" style="background: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">Go to Dashboard</a></p>
-      <p>Best regards,<br/>Eventide Team</p>
+      <p>Best regards,<br/>EventMatrix Team</p>
     `;
 
-    await this.sendEmail(email, 'Welcome to Eventide!', html);
+    await this.sendEmail(email, 'Welcome to EventMatrix!', html);
   }
 }

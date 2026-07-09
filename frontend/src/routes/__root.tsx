@@ -74,14 +74,14 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Eventide — Event Management Dashboard" },
+      { title: "EventMatrix — Event Management Dashboard" },
       {
         name: "description",
         content:
           "Plan, publish, and run events end-to-end — sessions, speakers, sponsors, tickets, and attendee check-in.",
       },
-      { name: "author", content: "Eventide" },
-      { property: "og:title", content: "Eventide — Event Management Dashboard" },
+      { name: "author", content: "EventMatrix" },
+      { property: "og:title", content: "EventMatrix — Event Management Dashboard" },
       {
         property: "og:description",
         content: "The modern control room for conferences, meetups, and festivals.",
