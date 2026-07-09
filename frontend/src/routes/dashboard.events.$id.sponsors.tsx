@@ -24,6 +24,8 @@ import {
 import { Plus, Pencil, Trash2, ExternalLink } from "lucide-react";
 import { EmptyState, LoadingBlock } from "@/components/ui-blocks";
 import type { Sponsor } from "@/lib/types";
+import { ImageUpload } from "@/components/image-upload";
+import { resolveImageUrl } from "@/lib/images";
 
 export const Route = createFileRoute("/dashboard/events/$id/sponsors")({
   component: Sponsors,
@@ -32,7 +34,7 @@ export const Route = createFileRoute("/dashboard/events/$id/sponsors")({
 const schema = z.object({
   name: z.string().min(1),
   tier: z.enum(["platinum", "gold", "silver", "bronze"]),
-  logoUrl: z.string().url().or(z.literal("")).optional(),
+  logoUrl: z.string().optional(),
   website: z.string().url().or(z.literal("")).optional(),
 });
 type FormValues = z.infer<typeof schema>;
@@ -108,7 +110,7 @@ function Sponsors() {
           <div key={s.id} className="flex items-center gap-3 rounded-lg border bg-card p-4">
             <div className="grid h-12 w-12 shrink-0 place-items-center overflow-hidden rounded bg-muted">
               {s.logoUrl ? (
-                <img src={s.logoUrl} alt={s.name} className="h-full w-full object-contain" />
+                <img src={resolveImageUrl(s.logoUrl)} alt={s.name} className="h-full w-full object-contain" />
               ) : (
                 <span className="text-xs text-muted-foreground">{s.name.slice(0, 2)}</span>
               )}
@@ -213,10 +215,13 @@ function SponsorDialog({
             </SelectContent>
           </Select>
         </div>
-        <div className="space-y-2">
-          <Label>Logo URL</Label>
-          <Input placeholder="https://..." {...form.register("logoUrl")} />
-        </div>
+        <ImageUpload
+          label="Logo"
+          aspect="square"
+          previewClassName="max-w-40"
+          value={form.watch("logoUrl")}
+          onChange={(url) => form.setValue("logoUrl", url, { shouldDirty: true })}
+        />
         <div className="space-y-2">
           <Label>Website</Label>
           <Input placeholder="https://..." {...form.register("website")} />

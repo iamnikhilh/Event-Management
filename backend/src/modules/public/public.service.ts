@@ -20,6 +20,11 @@ import { ListPublicEventsDto } from './dto/list-public-events.dto';
 export class PublicService {
   constructor(@Inject(DATABASE_CONNECTION) private readonly db: Database) {}
 
+  async countAllEvents(): Promise<number> {
+    const [result] = await this.db.select({ total: count() }).from(events);
+    return result?.total ?? 0;
+  }
+
   async findAllPublicEvents(query: ListPublicEventsDto) {
     try {
       const { page, limit, search } = query;

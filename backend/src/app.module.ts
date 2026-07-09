@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 
+import { CommonModule } from './common/common.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { DatabaseModule } from './database/database.module';
 import { SupabaseModule } from './database/supabase.module';
@@ -16,6 +17,7 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
 import { AnalyticsModule } from './modules/analytics/analytics.module';
 import { PublicModule } from './modules/public/public.module';
 import { EmailModule } from './modules/email/email.module';
+import { UploadsModule } from './modules/uploads/uploads.module';
 
 @Module({
   imports: [
@@ -24,6 +26,7 @@ import { EmailModule } from './modules/email/email.module';
       envFilePath: ['.env', '.env.local'],
     }),
     DatabaseModule,
+    CommonModule,
     SupabaseModule,
     AuthModule,
     UsersModule,
@@ -38,6 +41,7 @@ import { EmailModule } from './modules/email/email.module';
     AnalyticsModule,
     PublicModule,
     EmailModule,
+    UploadsModule,
   ],
 })
 export class AppModule {}

@@ -14,9 +14,11 @@ export interface EventItem {
   slug: string;
   description?: string;
   categoryId?: string;
+  category?: { id: string; name: string };
   venue?: string;
   eventDate: string;
   capacity?: number;
+  bannerImage?: string | null;
   isPublic: boolean;
   status: EventStatus;
   createdAt?: string;

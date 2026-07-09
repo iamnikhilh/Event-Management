@@ -18,6 +18,12 @@ export class PublicController {
     return this.publicService.findAllPublicEvents(query);
   }
 
+  @Get('count')
+  @ResponseMessage('Event count retrieved successfully')
+  countAll() {
+    return this.publicService.countAllEvents();
+  }
+
   @Get(':slug')
   @ResponseMessage('Event details retrieved successfully')
   findBySlug(@Param('slug') slug: string) {

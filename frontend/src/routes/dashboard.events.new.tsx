@@ -24,15 +24,13 @@ function NewEvent() {
   });
 
   return (
-    <div className="mx-auto max-w-3xl">
+    <div className="w-full max-w-6xl">
       <PageHeader title="New event" description="Set the essentials — you can refine later." />
-      <div className="rounded-lg border bg-card p-6">
-        <EventForm
-          submitLabel="Create event"
-          submitting={create.isPending}
-          onSubmit={(v) => create.mutate(v)}
-        />
-      </div>
+      <EventForm
+        submitLabel="Create event"
+        submitting={create.isPending}
+        onSubmit={(v) => create.mutate(v)}
+      />
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import { Inject, Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import {
   SQL,
   and,
@@ -12,6 +12,7 @@ import {
   or,
 } from 'drizzle-orm';
 
+import { OrganizerScopeService } from '../../common/services/organizer-scope.service';
 import { buildPaginationMeta } from '../../common/utils/pagination.util';
 import { DATABASE_CONNECTION } from '../../database/database.constants';
 import { Database } from '../../database/database.types';
@@ -30,9 +31,12 @@ import { UpdateEventDto } from './dto/update-event.dto';
 
 @Injectable()
 export class EventsService {
-  constructor(@Inject(DATABASE_CONNECTION) private readonly db: Database) {}
+  constructor(
+    @Inject(DATABASE_CONNECTION) private readonly db: Database,
+    private readonly organizerScope: OrganizerScopeService,
+  ) {}
 
-  async create(userId: string, dto: CreateEventDto) {
+  async create(user: AuthenticatedUser, dto: CreateEventDto) {
     await this.ensureCategoryExists(dto.categoryId);
 
     const [createdEvent] = await this.db
@@ -48,12 +52,11 @@ export class EventsService {
         status: dto.status ?? EventStatusValues.DRAFT,
         bannerImage: dto.bannerImage,
         isPublic: dto.isPublic ?? false,
-        createdById: userId,
+        organizerId: user.sub,
       })
       .returning({ id: events.id });
 
-    // Create user context for the creator so they can see their own newly created event
-    return this.findOne(createdEvent.id, { sub: userId, role: UserRoleValues.ORGANIZER } as AuthenticatedUser);
+    return this.findOne(createdEvent.id, user);
   }
 
   async list(query: ListEventsDto, user?: AuthenticatedUser) {
@@ -108,6 +111,24 @@ export class EventsService {
   }
 
   async findOne(eventId: string, user?: AuthenticatedUser) {
+    const conditions: SQL[] = [eq(events.id, eventId)];
+
+    if (user) {
+      if (user.role === UserRoleValues.ORGANIZER) {
+        conditions.push(eq(events.organizerId, user.sub));
+      } else if (user.role === UserRoleValues.ATTENDEE) {
+        conditions.push(
+          eq(events.isPublic, true),
+          eq(events.status, EventStatusValues.UPCOMING),
+        );
+      }
+    } else {
+      conditions.push(
+        eq(events.isPublic, true),
+        eq(events.status, EventStatusValues.UPCOMING),
+      );
+    }
+
     const [event] = await this.db
       .select({
         id: events.id,
@@ -136,101 +157,86 @@ export class EventsService {
       })
       .from(events)
       .innerJoin(categories, eq(events.categoryId, categories.id))
-      .innerJoin(users, eq(events.createdById, users.id))
-      .where(eq(events.id, eventId))
+      .innerJoin(users, eq(events.organizerId, users.id))
+      .where(and(...conditions))
       .limit(1);
 
     if (!event) {
       throw new NotFoundException('Event not found');
     }
 
-    // Access control check
-    if (user) {
-      if (user.role === UserRoleValues.ADMIN) {
-        // Admin can see all events
-        return event;
-      } else if (user.role === UserRoleValues.ORGANIZER) {
-        // Organizer can see ONLY their own events - complete isolation
-        if (event.createdBy.id !== user.sub) {
-          throw new ForbiddenException('You do not have access to this event');
-        }
-      } else {
-        // Attendee can see only public upcoming events
-        if (!event.isPublic || event.status !== EventStatusValues.UPCOMING) {
-          throw new ForbiddenException('You do not have access to this event');
-        }
-      }
-    } else {
-      // Unauthenticated users can see only public upcoming events
-      if (!event.isPublic || event.status !== EventStatusValues.UPCOMING) {
-        throw new ForbiddenException('You do not have access to this event');
-      }
-    }
-
     return event;
   }
 
-  async update(eventId: string, userId: string, userRole: string, dto: UpdateEventDto) {
-    // Create minimal user object for authorization check
-    const event = await this.findOne(eventId, { sub: userId, role: userRole } as AuthenticatedUser);
-
-    // Authorization check: only creator or admin can update
-    if (userRole !== UserRoleValues.ADMIN && event.createdBy.id !== userId) {
-      throw new ForbiddenException('You can only update your own events');
-    }
+  async update(eventId: string, user: AuthenticatedUser, dto: UpdateEventDto) {
+    await this.organizerScope.getScopedEvent(eventId, user);
 
     if (dto.categoryId) {
       await this.ensureCategoryExists(dto.categoryId);
     }
 
-    await this.db
+    const updateData: Record<string, unknown> = { updatedAt: new Date() };
+    if (dto.title) updateData.title = dto.title.trim();
+    if (dto.description) updateData.description = dto.description.trim();
+    if (dto.slug) updateData.slug = dto.slug.trim().toLowerCase();
+    if (dto.categoryId) updateData.categoryId = dto.categoryId;
+    if (dto.venue) updateData.venue = dto.venue.trim();
+    if (dto.eventDate) updateData.eventDate = new Date(dto.eventDate);
+    if (dto.capacity) updateData.capacity = dto.capacity;
+    if (dto.status) updateData.status = dto.status;
+    if (dto.bannerImage !== undefined) updateData.bannerImage = dto.bannerImage;
+    if (dto.isPublic !== undefined) updateData.isPublic = dto.isPublic;
+
+    const organizerFilter = this.organizerScope.organizerFilter(
+      user,
+      events.organizerId,
+    );
+    const whereClause = organizerFilter
+      ? and(eq(events.id, eventId), organizerFilter)
+      : eq(events.id, eventId);
+
+    const updated = await this.db
       .update(events)
-      .set({
-        ...(dto.title ? { title: dto.title.trim() } : {}),
-        ...(dto.description ? { description: dto.description.trim() } : {}),
-        ...(dto.slug ? { slug: dto.slug.trim().toLowerCase() } : {}),
-        ...(dto.categoryId ? { categoryId: dto.categoryId } : {}),
-        ...(dto.venue ? { venue: dto.venue.trim() } : {}),
-        ...(dto.eventDate ? { eventDate: new Date(dto.eventDate) } : {}),
-        ...(dto.capacity ? { capacity: dto.capacity } : {}),
-        ...(dto.status ? { status: dto.status } : {}),
-        ...(dto.bannerImage !== undefined
-          ? { bannerImage: dto.bannerImage }
-          : {}),
-        ...(dto.isPublic !== undefined ? { isPublic: dto.isPublic } : {}),
-        updatedAt: new Date(),
-      })
-      .where(eq(events.id, eventId));
+      .set(updateData)
+      .where(whereClause)
+      .returning({ id: events.id });
 
-    return this.findOne(eventId, { sub: userId, role: userRole } as AuthenticatedUser);
-  }
-
-  async remove(eventId: string, userId: string, userRole: string) {
-    // Create minimal user object for authorization check
-    const event = await this.findOne(eventId, { sub: userId, role: userRole } as AuthenticatedUser);
-
-    // Authorization check: only creator or admin can delete
-    if (userRole !== UserRoleValues.ADMIN && event.createdBy.id !== userId) {
-      throw new ForbiddenException('You can only delete your own events');
+    if (updated.length === 0) {
+      throw new NotFoundException('Event not found');
     }
 
-    await this.db.delete(events).where(eq(events.id, eventId));
+    return this.findOne(eventId, user);
+  }
+
+  async remove(eventId: string, user: AuthenticatedUser) {
+    const organizerFilter = this.organizerScope.organizerFilter(
+      user,
+      events.organizerId,
+    );
+    const whereClause = organizerFilter
+      ? and(eq(events.id, eventId), organizerFilter)
+      : eq(events.id, eventId);
+
+    const deleted = await this.db
+      .delete(events)
+      .where(whereClause)
+      .returning({ id: events.id });
+
+    if (deleted.length === 0) {
+      throw new NotFoundException('Event not found');
+    }
 
     return { message: 'Event deleted' };
   }
 
   async stats(user: AuthenticatedUser) {
-    let statsFilters: SQL | undefined;
+    const statsFilters = this.organizerScope.organizerFilter(
+      user,
+      events.organizerId,
+    );
 
-    if (user.role === UserRoleValues.ADMIN) {
-      // Admin sees stats for all events
-      statsFilters = undefined;
-    } else if (user.role === UserRoleValues.ORGANIZER) {
-      // Organizer sees stats only for their own events
-      statsFilters = eq(events.createdById, user.sub);
-    } else {
-      // Attendee sees no stats
-      throw new ForbiddenException('You do not have permission to access statistics');
+    if (!this.organizerScope.isAdmin(user) && !this.organizerScope.isOrganizer(user)) {
+      throw new NotFoundException('Event not found');
     }
 
     const [
@@ -239,22 +245,31 @@ export class EventsService {
       activeEventsResult,
       draftEventsResult,
     ] = await Promise.all([
+      this.db.select({ totalItems: count() }).from(events).where(statsFilters),
       this.db
         .select({ totalItems: count() })
         .from(events)
-        .where(statsFilters),
+        .where(
+          statsFilters
+            ? and(statsFilters, eq(events.status, EventStatusValues.UPCOMING))
+            : eq(events.status, EventStatusValues.UPCOMING),
+        ),
       this.db
         .select({ totalItems: count() })
         .from(events)
-        .where(statsFilters ? and(statsFilters, eq(events.status, EventStatusValues.UPCOMING)) : eq(events.status, EventStatusValues.UPCOMING)),
+        .where(
+          statsFilters
+            ? and(statsFilters, eq(events.status, EventStatusValues.ACTIVE))
+            : eq(events.status, EventStatusValues.ACTIVE),
+        ),
       this.db
         .select({ totalItems: count() })
         .from(events)
-        .where(statsFilters ? and(statsFilters, eq(events.status, EventStatusValues.ACTIVE)) : eq(events.status, EventStatusValues.ACTIVE)),
-      this.db
-        .select({ totalItems: count() })
-        .from(events)
-        .where(statsFilters ? and(statsFilters, eq(events.status, EventStatusValues.DRAFT)) : eq(events.status, EventStatusValues.DRAFT)),
+        .where(
+          statsFilters
+            ? and(statsFilters, eq(events.status, EventStatusValues.DRAFT))
+            : eq(events.status, EventStatusValues.DRAFT),
+        ),
     ]);
 
     return {
@@ -269,14 +284,14 @@ export class EventsService {
     let recentFilters: SQL | undefined;
 
     if (user.role === UserRoleValues.ADMIN) {
-      // Admin sees recent events from all creators
       recentFilters = undefined;
     } else if (user.role === UserRoleValues.ORGANIZER) {
-      // Organizer sees recent events only from themselves
-      recentFilters = eq(events.createdById, user.sub);
+      recentFilters = eq(events.organizerId, user.sub);
     } else {
-      // Attendee sees only public upcoming events
-      recentFilters = and(eq(events.isPublic, true), eq(events.status, EventStatusValues.UPCOMING));
+      recentFilters = and(
+        eq(events.isPublic, true),
+        eq(events.status, EventStatusValues.UPCOMING),
+      );
     }
 
     return this.db
@@ -305,36 +320,28 @@ export class EventsService {
     }
   }
 
-  private buildFilters(query: ListEventsDto, user?: AuthenticatedUser): SQL | undefined {
+  private buildFilters(
+    query: ListEventsDto,
+    user?: AuthenticatedUser,
+  ): SQL | undefined {
     const filters: SQL[] = [];
 
-    // Role-based filtering for list endpoint - this is the main access control
-    let accessFilter: SQL | undefined;
-
     if (user) {
-      if (user.role === UserRoleValues.ADMIN) {
-        // Admin sees all events - no access filter needed
-        accessFilter = undefined;
-      } else if (user.role === UserRoleValues.ORGANIZER) {
-        // Organizer sees ONLY their own events - complete isolation from other organizers
-        accessFilter = eq(events.createdById, user.sub);
-      } else {
-        // Attendee sees only public upcoming events
-        accessFilter = and(
+      if (user.role === UserRoleValues.ORGANIZER) {
+        filters.push(eq(events.organizerId, user.sub));
+      } else if (user.role === UserRoleValues.ATTENDEE) {
+        filters.push(
           eq(events.isPublic, true),
-          eq(events.status, EventStatusValues.UPCOMING)
+          eq(events.status, EventStatusValues.UPCOMING),
         );
       }
     } else {
-      // No user: public upcoming events only
-      accessFilter = and(eq(events.isPublic, true), eq(events.status, EventStatusValues.UPCOMING));
+      filters.push(
+        eq(events.isPublic, true),
+        eq(events.status, EventStatusValues.UPCOMING),
+      );
     }
 
-    if (accessFilter) {
-      filters.push(accessFilter);
-    }
-
-    // Additional filters from query parameters
     if (query.search) {
       filters.push(
         or(

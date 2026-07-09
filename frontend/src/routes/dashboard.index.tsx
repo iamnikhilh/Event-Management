@@ -1,23 +1,29 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { analyticsApi, eventsApi } from "@/lib/api";
-import { PageHeader, LoadingBlock, ErrorBlock } from "@/components/ui-blocks";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  PageHeader,
+  LoadingBlock,
+  ErrorBlock,
+  StatCard,
+  Panel,
+  PanelHeader,
+} from "@/components/ui-blocks";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { CalendarPlus, TrendingUp } from "lucide-react";
+import {
+  CalendarPlus,
+  TrendingUp,
+  Zap,
+  CheckCircle2,
+  FileEdit,
+  ArrowUpRight,
+} from "lucide-react";
+import { STATUS_STYLES, statusLabel } from "@/components/public/event-utils";
 
 export const Route = createFileRoute("/dashboard/")({
   component: Overview,
 });
-
-const STATUS_COLORS: Record<string, string> = {
-  upcoming: "bg-primary/10 text-primary",
-  active: "bg-green-500/10 text-green-700",
-  completed: "bg-muted text-muted-foreground",
-  draft: "bg-amber-500/10 text-amber-700",
-  cancelled: "bg-destructive/10 text-destructive",
-};
 
 function Overview() {
   const overview = useQuery({
@@ -30,14 +36,12 @@ function Overview() {
   });
 
   const byStatus = overview.data?.eventsByStatus ?? {
-    draft: 0, upcoming: 0, active: 0, completed: 0, cancelled: 0,
+    draft: 0,
+    upcoming: 0,
+    active: 0,
+    completed: 0,
+    cancelled: 0,
   };
-  const cards = [
-    { label: "Upcoming", value: byStatus.upcoming ?? 0, tone: "text-primary" },
-    { label: "Active", value: byStatus.active ?? 0, tone: "text-green-600" },
-    { label: "Completed", value: byStatus.completed ?? 0, tone: "text-muted-foreground" },
-    { label: "Draft", value: byStatus.draft ?? 0, tone: "text-amber-600" },
-  ];
 
   return (
     <div>
@@ -45,92 +49,94 @@ function Overview() {
         title="Overview"
         description="A live pulse on everything you're running."
         action={
-          <Button asChild>
+          <Button asChild className="rounded-full shadow-sm shadow-primary/20">
             <Link to="/dashboard/events/new">
-              <CalendarPlus className="mr-1 h-4 w-4" /> New event
+              <CalendarPlus className="mr-1.5 h-4 w-4" /> New event
             </Link>
           </Button>
         }
       />
 
-      <div className="grid gap-4 md:grid-cols-4">
-        {cards.map((c) => (
-          <Card key={c.label}>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                {c.label}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className={`text-3xl font-semibold ${c.tone}`}>{c.value}</div>
-            </CardContent>
-          </Card>
-        ))}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <StatCard label="Upcoming" value={byStatus.upcoming ?? 0} icon={Zap} tone="primary" />
+        <StatCard label="Active" value={byStatus.active ?? 0} icon={TrendingUp} tone="success" />
+        <StatCard
+          label="Completed"
+          value={byStatus.completed ?? 0}
+          icon={CheckCircle2}
+          tone="muted"
+        />
+        <StatCard label="Draft" value={byStatus.draft ?? 0} icon={FileEdit} tone="warning" />
       </div>
 
       <div className="mt-8 grid gap-6 lg:grid-cols-3">
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle className="text-base">Recent events</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {recent.isLoading && <LoadingBlock />}
-            {recent.error && <ErrorBlock error={recent.error} />}
-            {recent.data && recent.data.items.length === 0 && (
-              <p className="text-sm text-muted-foreground">No events yet.</p>
-            )}
-            <ul className="divide-y">
-              {recent.data?.items.map((e) => (
-                <li key={e.id} className="flex items-center justify-between py-3">
+        <Panel className="lg:col-span-2">
+          <PanelHeader title="Recent events" description="Your latest activity" />
+          {recent.isLoading && <LoadingBlock />}
+          {recent.error && <ErrorBlock error={recent.error} />}
+          {recent.data && recent.data.items.length === 0 && (
+            <p className="text-sm text-muted-foreground">No events yet.</p>
+          )}
+          <ul className="divide-y divide-border/60">
+            {recent.data?.items.map((e) => (
+              <li key={e.id}>
+                <Link
+                  to="/dashboard/events/$id"
+                  params={{ id: e.id }}
+                  className="group flex items-center justify-between gap-4 py-4 transition-colors hover:bg-muted/30 -mx-2 px-2 rounded-xl"
+                >
                   <div className="min-w-0">
-                    <Link
-                      to="/dashboard/events/$id"
-                      params={{ id: e.id }}
-                      className="truncate text-sm font-medium hover:underline"
-                    >
+                    <p className="truncate text-sm font-medium group-hover:text-primary">
                       {e.title}
-                    </Link>
-                    <div className="text-xs text-muted-foreground">
+                    </p>
+                    <p className="text-xs text-muted-foreground">
                       {new Date(e.eventDate).toLocaleString()} · {e.venue || "TBD"}
-                    </div>
+                    </p>
                   </div>
-                  <Badge variant="secondary" className={STATUS_COLORS[e.status]}>
-                    {e.status}
-                  </Badge>
-                </li>
-              ))}
-            </ul>
-          </CardContent>
-        </Card>
+                  <div className="flex items-center gap-2">
+                    <Badge
+                      variant="outline"
+                      className={STATUS_STYLES[e.status] ?? STATUS_STYLES.upcoming}
+                    >
+                      {statusLabel(e.status)}
+                    </Badge>
+                    <ArrowUpRight className="h-4 w-4 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
+                  </div>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </Panel>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Top events</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {overview.isLoading && <LoadingBlock />}
-            {overview.error && <ErrorBlock error={overview.error} />}
-            <ul className="space-y-3">
-              {overview.data?.top5Events?.map((t) => (
-                <li key={t.eventId} className="flex items-center justify-between">
-                  <Link
-                    to="/dashboard/events/$id"
-                    params={{ id: t.eventId }}
-                    className="truncate text-sm hover:underline"
-                  >
+        <Panel>
+          <PanelHeader title="Top events" description="By attendance" />
+          {overview.isLoading && <LoadingBlock />}
+          {overview.error && <ErrorBlock error={overview.error} />}
+          <ul className="space-y-3">
+            {overview.data?.top5Events?.map((t, i) => (
+              <li key={t.eventId}>
+                <Link
+                  to="/dashboard/events/$id"
+                  params={{ id: t.eventId }}
+                  className="group flex items-center gap-3 rounded-xl p-2 transition-colors hover:bg-muted/40"
+                >
+                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-xs font-semibold text-primary">
+                    {i + 1}
+                  </span>
+                  <span className="min-w-0 flex-1 truncate text-sm group-hover:text-primary">
                     {t.title}
-                  </Link>
-                  <span className="flex items-center gap-1 text-sm font-medium">
-                    <TrendingUp className="h-3.5 w-3.5 text-primary" />
+                  </span>
+                  <span className="flex items-center gap-1 text-sm font-semibold text-primary">
+                    <TrendingUp className="h-3.5 w-3.5" />
                     {t.attendance}
                   </span>
-                </li>
-              )) ?? (
-                <p className="text-sm text-muted-foreground">No data yet.</p>
-              )}
-            </ul>
-          </CardContent>
-        </Card>
+                </Link>
+              </li>
+            )) ?? (
+              <p className="text-sm text-muted-foreground">No data yet.</p>
+            )}
+          </ul>
+        </Panel>
       </div>
     </div>
   );

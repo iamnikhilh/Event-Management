@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
 import { useRef, useState } from "react";
 import {
   ArrowRight,
@@ -10,6 +11,8 @@ import {
   Users2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { PublicHeader } from "@/components/public/public-header";
+import { publicApi } from "@/lib/api";
 
 export const Route = createFileRoute("/")({
   component: Landing,
@@ -110,6 +113,12 @@ const EVENT_TYPES = ["Product launches", "Music festivals", "Conferences", "Wedd
 
 function Landing() {
   const [spot, setSpot] = useState({ x: 50, y: 20 });
+  const eventCount = useQuery({
+    queryKey: ["public-events-total-count"],
+    queryFn: () => publicApi.eventCount(),
+    staleTime: 60_000,
+  });
+  const totalEvents = eventCount.data ?? 0;
 
   function handleHeroMove(e: React.MouseEvent<HTMLDivElement>) {
     const rect = e.currentTarget.getBoundingClientRect();
@@ -145,25 +154,9 @@ function Landing() {
         />
       </div>
 
-      <header className="relative z-10 mx-auto flex max-w-6xl items-center justify-between px-6 py-8">
-        <Link to="/" className="flex items-center gap-3">
-          <img src="/logo.svg" alt="EventMatrix" className="h-16 w-16 object-contain" />
-          <div className="flex flex-col">
-            <span className="text-xl font-bold tracking-tight">EventMatrix</span>
-            <span className="text-xs text-muted-foreground">Plan • Manage • Succeed</span>
-          </div>
-        </Link>
-        <div className="flex items-center gap-2">
-          <Button asChild variant="ghost" size="sm">
-            <Link to="/events">Browse events</Link>
-          </Button>
-          <Button asChild size="sm">
-            <Link to="/login">Sign in</Link>
-          </Button>
-        </div>
-      </header>
+      <PublicHeader showBrowseEvents large hideOnScroll />
 
-      <main className="relative z-10 mx-auto max-w-6xl px-6 pb-20">
+      <main className="relative z-10 mx-auto max-w-6xl px-6 pb-20 pt-4">
         <div className="relative" onMouseMove={handleHeroMove}>
           <div
             className="pointer-events-none absolute inset-0"
@@ -180,7 +173,9 @@ function Landing() {
                     style={{ animation: "em-blink 1.6s ease-in-out infinite" }}
                   />
                 </span>
-                128 events live right now
+                {eventCount.isLoading
+                  ? "Loading events…"
+                  : `${totalEvents} event${totalEvents === 1 ? "" : "s"} live right now`}
               </div>
 
               <h1

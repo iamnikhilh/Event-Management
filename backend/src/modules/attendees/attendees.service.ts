@@ -3,13 +3,18 @@ import {
   Injectable,
   NotFoundException,
   ConflictException,
-  ForbiddenException,
 } from '@nestjs/common';
 import { eq, and, count, or, ilike, desc } from 'drizzle-orm';
 
+import { OrganizerScopeService } from '../../common/services/organizer-scope.service';
 import { DATABASE_CONNECTION } from '../../database/database.constants';
 import { Database } from '../../database/database.types';
-import { attendees, events, TicketStatusValues, UserRoleValues } from '../../database/schema';
+import {
+  attendees,
+  events,
+  EventStatusValues,
+  TicketStatusValues,
+} from '../../database/schema';
 import { buildPaginationMeta } from '../../common/utils/pagination.util';
 import { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
 import { EmailService } from '../email/email.service';
@@ -24,34 +29,41 @@ export class AttendeesService {
     @Inject(DATABASE_CONNECTION) private readonly db: Database,
     private readonly ticketTypesService: TicketTypesService,
     private readonly emailService: EmailService,
+    private readonly organizerScope: OrganizerScopeService,
   ) {}
-
-  private async verifyEventAccess(eventId: string, user: AuthenticatedUser): Promise<void> {
-    const [event] = await this.db
-      .select()
-      .from(events)
-      .where(eq(events.id, eventId))
-      .limit(1);
-
-    if (!event) {
-      throw new NotFoundException('Event not found');
-    }
-
-    // Admin can access all events, organizers can only access their own
-    if (user.role !== UserRoleValues.ADMIN && event.createdById !== user.sub) {
-      throw new ForbiddenException('You do not have access to this event');
-    }
-  }
 
   async register(
     eventId: string,
     userId: string | null,
     dto: RegisterAttendeeDto,
   ) {
+    const [event] = await this.db
+      .select({
+        id: events.id,
+        organizerId: events.organizerId,
+        title: events.title,
+        isPublic: events.isPublic,
+        status: events.status,
+      })
+      .from(events)
+      .where(
+        and(
+          eq(events.id, eventId),
+          eq(events.isPublic, true),
+          eq(events.status, EventStatusValues.UPCOMING),
+        ),
+      )
+      .limit(1);
+
+    if (!event) {
+      throw new NotFoundException('Event not found');
+    }
+
     await this.ticketTypesService.findOne(eventId, dto.ticketTypeId);
 
-    // Generate a random QR code (using Math.random since nanoid is ESM)
-    const qrCode = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+    const qrCode =
+      Math.random().toString(36).substring(2, 15) +
+      Math.random().toString(36).substring(2, 15);
     const availableQuantity =
       await this.ticketTypesService.getAvailableQuantity(dto.ticketTypeId);
 
@@ -64,6 +76,7 @@ export class AttendeesService {
       .insert(attendees)
       .values({
         eventId,
+        organizerId: event.organizerId,
         ticketTypeId: dto.ticketTypeId,
         userId: userId || null,
         fullName: dto.fullName.trim(),
@@ -78,44 +91,45 @@ export class AttendeesService {
       await this.ticketTypesService.incrementSold(dto.ticketTypeId);
     }
 
-    // Get event details to include in email
-    const [event] = await this.db
-      .select()
-      .from(events)
-      .where(eq(events.id, eventId))
-      .limit(1);
-
-    // Send confirmation email
     try {
       await this.emailService.sendAttendeeConfirmation(
         dto.email.trim(),
         dto.fullName.trim(),
-        event?.title || 'Your Event',
+        event.title,
         qrCode,
       );
     } catch (error) {
       console.error('Failed to send confirmation email:', error);
-      // Don't fail registration if email fails
     }
 
     return createdAttendee;
   }
 
-  async findAllByEvent(eventId: string, query: ListAttendeesDto, user: AuthenticatedUser) {
-    await this.verifyEventAccess(eventId, user);
+  async findAllByEvent(
+    eventId: string,
+    query: ListAttendeesDto,
+    user: AuthenticatedUser,
+  ) {
+    await this.organizerScope.verifyEventManageAccess(eventId, user);
 
     const { page, limit, search, status } = query;
     const offset = (page - 1) * limit;
 
-    // Build where clause dynamically
-    const conditions: any[] = [eq(attendees.eventId, eventId)];
+    const organizerFilter = this.organizerScope.organizerFilter(
+      user,
+      attendees.organizerId,
+    );
+    const conditions = [eq(attendees.eventId, eventId)];
+    if (organizerFilter) {
+      conditions.push(organizerFilter);
+    }
 
     if (search) {
       conditions.push(
         or(
           ilike(attendees.fullName, `%${search}%`),
           ilike(attendees.email, `%${search}%`),
-        ),
+        )!,
       );
     }
 
@@ -144,13 +158,29 @@ export class AttendeesService {
     };
   }
 
-  async findOne(attendeeId: string, eventId: string, user: AuthenticatedUser) {
-    await this.verifyEventAccess(eventId, user);
+  async findOne(
+    attendeeId: string,
+    eventId: string,
+    user: AuthenticatedUser,
+  ) {
+    await this.organizerScope.verifyEventManageAccess(eventId, user);
+
+    const organizerFilter = this.organizerScope.organizerFilter(
+      user,
+      attendees.organizerId,
+    );
+    const conditions = [
+      eq(attendees.id, attendeeId),
+      eq(attendees.eventId, eventId),
+    ];
+    if (organizerFilter) {
+      conditions.push(organizerFilter);
+    }
 
     const [attendee] = await this.db
       .select()
       .from(attendees)
-      .where(eq(attendees.id, attendeeId))
+      .where(and(...conditions))
       .limit(1);
 
     if (!attendee) {
@@ -160,9 +190,25 @@ export class AttendeesService {
     return attendee;
   }
 
-  async update(attendeeId: string, eventId: string, dto: UpdateAttendeeDto, user: AuthenticatedUser) {
-    await this.verifyEventAccess(eventId, user);
+  async update(
+    attendeeId: string,
+    eventId: string,
+    dto: UpdateAttendeeDto,
+    user: AuthenticatedUser,
+  ) {
     await this.findOne(attendeeId, eventId, user);
+
+    const organizerFilter = this.organizerScope.organizerFilter(
+      user,
+      attendees.organizerId,
+    );
+    const conditions = [
+      eq(attendees.id, attendeeId),
+      eq(attendees.eventId, eventId),
+    ];
+    if (organizerFilter) {
+      conditions.push(organizerFilter);
+    }
 
     await this.db
       .update(attendees)
@@ -172,26 +218,65 @@ export class AttendeesService {
         ...(dto.status ? { status: dto.status } : {}),
         updatedAt: new Date(),
       })
-      .where(eq(attendees.id, attendeeId));
+      .where(and(...conditions));
 
     return this.findOne(attendeeId, eventId, user);
   }
 
-  async remove(attendeeId: string, eventId: string, user: AuthenticatedUser) {
-    await this.verifyEventAccess(eventId, user);
+  async remove(
+    attendeeId: string,
+    eventId: string,
+    user: AuthenticatedUser,
+  ) {
     await this.findOne(attendeeId, eventId, user);
-    await this.db.delete(attendees).where(eq(attendees.id, attendeeId));
+
+    const organizerFilter = this.organizerScope.organizerFilter(
+      user,
+      attendees.organizerId,
+    );
+    const conditions = [
+      eq(attendees.id, attendeeId),
+      eq(attendees.eventId, eventId),
+    ];
+    if (organizerFilter) {
+      conditions.push(organizerFilter);
+    }
+
+    const deleted = await this.db
+      .delete(attendees)
+      .where(and(...conditions))
+      .returning({ id: attendees.id });
+
+    if (!deleted.length) {
+      throw new NotFoundException('Attendee not found');
+    }
 
     return { message: 'Attendee deleted' };
   }
 
-  async checkIn(qrCode: string, eventId: string, user: AuthenticatedUser) {
-    await this.verifyEventAccess(eventId, user);
+  async checkIn(
+    qrCode: string,
+    eventId: string,
+    user: AuthenticatedUser,
+  ) {
+    await this.organizerScope.verifyEventManageAccess(eventId, user);
+
+    const organizerFilter = this.organizerScope.organizerFilter(
+      user,
+      attendees.organizerId,
+    );
+    const conditions = [
+      eq(attendees.qrCode, qrCode),
+      eq(attendees.eventId, eventId),
+    ];
+    if (organizerFilter) {
+      conditions.push(organizerFilter);
+    }
 
     const [attendee] = await this.db
       .select()
       .from(attendees)
-      .where(eq(attendees.qrCode, qrCode))
+      .where(and(...conditions))
       .limit(1);
 
     if (!attendee) {
@@ -218,21 +303,30 @@ export class AttendeesService {
   }
 
   async exportCsv(eventId: string, user: AuthenticatedUser) {
-    await this.verifyEventAccess(eventId, user);
+    await this.organizerScope.verifyEventManageAccess(eventId, user);
+
+    const organizerFilter = this.organizerScope.organizerFilter(
+      user,
+      attendees.organizerId,
+    );
+    const whereClause = organizerFilter
+      ? and(eq(attendees.eventId, eventId), organizerFilter)
+      : eq(attendees.eventId, eventId);
 
     const allAttendees = await this.db
       .select()
       .from(attendees)
-      .where(eq(attendees.eventId, eventId));
+      .where(whereClause);
 
     if (allAttendees.length === 0) {
       return 'Full Name,Email,Status,QR Code,Checked In,Registered At\n';
     }
 
-    const headers = 'Full Name,Email,Status,QR Code,Checked In,Registered At\n';
+    const headers =
+      'Full Name,Email,Status,QR Code,Checked In,Registered At\n';
     const rows = allAttendees
       .map(
-        (attendee: any) =>
+        (attendee) =>
           `"${attendee.fullName}","${attendee.email}","${attendee.status}","${attendee.qrCode}",${attendee.checkedIn ? 'Yes' : 'No'},"${attendee.registeredAt?.toISOString() || ''}"`,
       )
       .join('\n');

@@ -17,8 +17,15 @@ export interface Paginated<T> {
   pagination: { page: number; limit: number; totalItems: number; totalPages: number };
 }
 
-async function paginated<T>(path: string, query: Record<string, unknown>): Promise<Paginated<T>> {
-  const res = await api<Envelope<T[]>>(path, { query: query as Record<string, string | number> });
+async function paginated<T>(
+  path: string,
+  query: Record<string, unknown>,
+  options?: { auth?: boolean },
+): Promise<Paginated<T>> {
+  const res = await api<Envelope<T[]>>(path, {
+    query: query as Record<string, string | number>,
+    auth: options?.auth,
+  });
   return {
     items: res.data ?? [],
     pagination:
@@ -150,10 +157,24 @@ export const analyticsApi = {
   overview: () => api<Envelope<OverviewAnalytics>>("/analytics/overview").then((r) => r.data),
 };
 
+// Uploads
+export const uploadsApi = {
+  upload: (file: File) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    return api<Envelope<{ url: string; filename: string }>>("/uploads", {
+      method: "POST",
+      body: formData,
+    }).then((r) => r.data);
+  },
+};
+
 // Public
 export const publicApi = {
+  eventCount: () =>
+    api<Envelope<number>>("/public/events/count", { auth: false }).then((r) => r.data),
   events: (params: { page?: number; limit?: number; search?: string }) =>
-    paginated<EventItem>("/public/events", { page: 1, limit: 10, ...params }),
+    paginated<EventItem>("/public/events", { page: 1, limit: 10, ...params }, { auth: false }),
   eventBySlug: (slug: string) =>
     api<
       Envelope<

@@ -99,7 +99,7 @@ export const events = pgTable(
     status: eventStatusEnum('status').default('draft').notNull(),
     bannerImage: text('banner_image'),
     isPublic: boolean('is_public').default(false).notNull(),
-    createdById: uuid('created_by_id')
+    organizerId: uuid('organizer_id')
       .notNull()
       .references(() => users.id, { onDelete: 'restrict' }),
     createdAt: timestamp('created_at', { withTimezone: true })
@@ -122,8 +122,13 @@ export const events = pgTable(
   }),
 );
 
-export const speakers = pgTable('speakers', {
+export const speakers = pgTable(
+  'speakers',
+  {
   id: uuid('id').defaultRandom().primaryKey(),
+  organizerId: uuid('organizer_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'restrict' }),
   name: varchar('name', { length: 255 }).notNull(),
   title: varchar('title', { length: 255 }).notNull(),
   company: varchar('company', { length: 255 }).notNull(),
@@ -135,7 +140,11 @@ export const speakers = pgTable('speakers', {
   updatedAt: timestamp('updated_at', { withTimezone: true })
     .defaultNow()
     .notNull(),
-});
+  },
+  (table) => ({
+    organizerIdIdx: index('speakers_organizer_id_idx').on(table.organizerId),
+  }),
+);
 
 export const sessions = pgTable(
   'sessions',
@@ -144,6 +153,9 @@ export const sessions = pgTable(
     eventId: uuid('event_id')
       .notNull()
       .references(() => events.id, { onDelete: 'cascade' }),
+    organizerId: uuid('organizer_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'restrict' }),
     title: varchar('title', { length: 255 }).notNull(),
     description: text('description'),
     track: varchar('track', { length: 255 }),
@@ -158,6 +170,7 @@ export const sessions = pgTable(
   },
   (table) => ({
     eventIdIdx: index('sessions_event_id_idx').on(table.eventId),
+    organizerIdIdx: index('sessions_organizer_id_idx').on(table.organizerId),
     startTimeIdx: index('sessions_start_time_idx').on(table.startTime),
   }),
 );
@@ -184,6 +197,9 @@ export const sponsors = pgTable(
     eventId: uuid('event_id')
       .notNull()
       .references(() => events.id, { onDelete: 'cascade' }),
+    organizerId: uuid('organizer_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'restrict' }),
     name: varchar('name', { length: 255 }).notNull(),
     logoUrl: text('logo_url'),
     website: varchar('website', { length: 255 }),
@@ -197,6 +213,7 @@ export const sponsors = pgTable(
   },
   (table) => ({
     eventIdIdx: index('sponsors_event_id_idx').on(table.eventId),
+    organizerIdIdx: index('sponsors_organizer_id_idx').on(table.organizerId),
     tierIdx: index('sponsors_tier_idx').on(table.tier),
   }),
 );
@@ -208,6 +225,9 @@ export const ticketTypes = pgTable(
     eventId: uuid('event_id')
       .notNull()
       .references(() => events.id, { onDelete: 'cascade' }),
+    organizerId: uuid('organizer_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'restrict' }),
     name: varchar('name', { length: 255 }).notNull(),
     price: decimal('price', { precision: 10, scale: 2 }).notNull(),
     quantity: integer('quantity').notNull(),
@@ -221,6 +241,7 @@ export const ticketTypes = pgTable(
   },
   (table) => ({
     eventIdIdx: index('ticket_types_event_id_idx').on(table.eventId),
+    organizerIdIdx: index('ticket_types_organizer_id_idx').on(table.organizerId),
   }),
 );
 
@@ -231,6 +252,9 @@ export const attendees = pgTable(
     eventId: uuid('event_id')
       .notNull()
       .references(() => events.id, { onDelete: 'cascade' }),
+    organizerId: uuid('organizer_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'restrict' }),
     ticketTypeId: uuid('ticket_type_id')
       .notNull()
       .references(() => ticketTypes.id, { onDelete: 'restrict' }),
@@ -255,6 +279,7 @@ export const attendees = pgTable(
   },
   (table) => ({
     eventIdIdx: index('attendees_event_id_idx').on(table.eventId),
+    organizerIdIdx: index('attendees_organizer_id_idx').on(table.organizerId),
     ticketTypeIdIdx: index('attendees_ticket_type_id_idx').on(
       table.ticketTypeId,
     ),
@@ -300,8 +325,8 @@ export const eventsRelations = relations(events, ({ one, many }) => ({
     fields: [events.categoryId],
     references: [categories.id],
   }),
-  createdBy: one(users, {
-    fields: [events.createdById],
+  organizer: one(users, {
+    fields: [events.organizerId],
     references: [users.id],
   }),
   sessions: many(sessions),
@@ -310,7 +335,11 @@ export const eventsRelations = relations(events, ({ one, many }) => ({
   attendees: many(attendees),
 }));
 
-export const speakersRelations = relations(speakers, ({ many }) => ({
+export const speakersRelations = relations(speakers, ({ one, many }) => ({
+  organizer: one(users, {
+    fields: [speakers.organizerId],
+    references: [users.id],
+  }),
   sessions: many(sessionSpeakers),
 }));
 
