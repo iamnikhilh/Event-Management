@@ -35,7 +35,7 @@ export class NotificationsService {
     const { page, limit, isRead } = query;
     const offset = (page - 1) * limit;
 
-    const filters: any[] = [eq(notifications.userId, userId)];
+    const filters: Parameters<typeof and>[] = [eq(notifications.userId, userId)];
 
     if (isRead !== undefined) {
       filters.push(eq(notifications.isRead, isRead));

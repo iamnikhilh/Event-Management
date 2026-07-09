@@ -25,7 +25,7 @@ export class PublicService {
       const { page, limit, search } = query;
       const offset = (page - 1) * limit;
 
-      const filters: any[] = [
+      const filters: Parameters<typeof and>[] = [
         eq(events.isPublic, true),
         ne(events.status, EventStatusValues.DRAFT),
       ];

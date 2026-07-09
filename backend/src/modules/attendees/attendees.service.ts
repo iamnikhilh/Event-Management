@@ -6,7 +6,6 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { eq, and, count, or, ilike, desc } from 'drizzle-orm';
-import { customAlphabet } from 'nanoid';
 
 import { DATABASE_CONNECTION } from '../../database/database.constants';
 import { Database } from '../../database/database.types';
@@ -21,8 +20,6 @@ import { TicketTypesService } from '../ticket-types/ticket-types.service';
 
 @Injectable()
 export class AttendeesService {
-  private readonly nanoid = customAlphabet('1234567890abcdefghijklmnopqrstuvwxyz', 12);
-
   constructor(
     @Inject(DATABASE_CONNECTION) private readonly db: Database,
     private readonly ticketTypesService: TicketTypesService,
@@ -53,7 +50,8 @@ export class AttendeesService {
   ) {
     await this.ticketTypesService.findOne(eventId, dto.ticketTypeId);
 
-    const qrCode = this.nanoid();
+    // Generate a random QR code (using Math.random since nanoid is ESM)
+    const qrCode = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
     const availableQuantity =
       await this.ticketTypesService.getAvailableQuantity(dto.ticketTypeId);
 
@@ -109,7 +107,7 @@ export class AttendeesService {
     const { page, limit, search, status } = query;
     const offset = (page - 1) * limit;
 
-    const filters: any[] = [eq(attendees.eventId, eventId)];
+    const filters: Parameters<typeof and>[] = [eq(attendees.eventId, eventId)];
 
     if (search) {
       filters.push(
