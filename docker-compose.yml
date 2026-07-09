@@ -1,32 +1,30 @@
-version: '3.9'
-
 services:
   backend-api:
-    image: ${DOCKER_HUB_USERNAME}/backend-api:${IMAGE_TAG:-latest}
+    image: iamnikhilh/backend-api:${IMAGE_TAG:-latest}
     env_file:
-      - backend/.env
+      - .env
     environment:
       NODE_ENV: production
       PORT: ${BACKEND_API_PORT:-4000}
       JWT_ACCESS_EXPIRES_IN: ${BACKEND_JWT_ACCESS_EXPIRES_IN:-15m}
       JWT_REFRESH_EXPIRES_IN: ${BACKEND_JWT_REFRESH_EXPIRES_IN:-7d}
-      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:5173}
     ports:
       - "${BACKEND_API_PORT:-4000}:4000"
     restart: unless-stopped
 
   frontend-portal:
-    image: ${DOCKER_HUB_USERNAME}/frontend-portal:${IMAGE_TAG:-latest}
+    image: iamnikhilh/frontend-portal:${IMAGE_TAG:-latest}
     env_file:
-      - frontend/.env
+      - .env
     environment:
       HOSTNAME: 0.0.0.0
-      PORT: ${FRONTEND_PORT:-3000}
+      PORT: ${FRONTEND_PORT:-5173}
       BACKEND_URL: ${BACKEND_URL:-http://backend-api:4000}
     depends_on:
       - backend-api
     ports:
-      - "${FRONTEND_PORT:-3000}:3000"
+      - "${FRONTEND_PORT:-5173}:5173"
     restart: unless-stopped
 
 volumes:

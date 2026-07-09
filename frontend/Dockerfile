@@ -31,11 +31,11 @@ COPY --from=builder /app/dist /usr/share/nginx/html
 RUN rm -rf /var/cache/nginx /var/log/nginx/*
 
 # Expose port
-EXPOSE 80
+EXPOSE 5173
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD wget --quiet --tries=1 --spider http://localhost/ || exit 1
+  CMD wget --quiet --tries=1 --spider http://localhost:5173/ || exit 1
 
 # Start nginx
 CMD ["nginx", "-g", "daemon off;"]
