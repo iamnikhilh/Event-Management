@@ -1,4 +1,4 @@
-const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:4000/api/v1";
+import { getApiBaseUrl } from "./env";
 
 /** Turn stored upload paths or external URLs into a browser-loadable src. */
 export function resolveImageUrl(src?: string | null): string | undefined {
@@ -11,7 +11,7 @@ export function resolveImageUrl(src?: string | null): string | undefined {
   ) {
     return src;
   }
-  const base = API_BASE.replace(/\/$/, "");
+  const base = getApiBaseUrl();
   const path = src.startsWith("/") ? src : `/${src}`;
   return `${base}${path}`;
 }
