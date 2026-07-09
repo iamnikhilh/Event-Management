@@ -6,7 +6,7 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { eq, and, count, or, ilike, desc } from 'drizzle-orm';
-import { nanoid } from 'nanoid';
+import { customAlphabet } from 'nanoid';
 
 import { DATABASE_CONNECTION } from '../../database/database.constants';
 import { Database } from '../../database/database.types';
@@ -21,6 +21,8 @@ import { TicketTypesService } from '../ticket-types/ticket-types.service';
 
 @Injectable()
 export class AttendeesService {
+  private readonly nanoid = customAlphabet('1234567890abcdefghijklmnopqrstuvwxyz', 12);
+
   constructor(
     @Inject(DATABASE_CONNECTION) private readonly db: Database,
     private readonly ticketTypesService: TicketTypesService,
@@ -51,7 +53,7 @@ export class AttendeesService {
   ) {
     await this.ticketTypesService.findOne(eventId, dto.ticketTypeId);
 
-    const qrCode = nanoid();
+    const qrCode = this.nanoid();
     const availableQuantity =
       await this.ticketTypesService.getAvailableQuantity(dto.ticketTypeId);
 
@@ -231,7 +233,7 @@ export class AttendeesService {
     const headers = 'Full Name,Email,Status,QR Code,Checked In,Registered At\n';
     const rows = allAttendees
       .map(
-        (attendee) =>
+        (attendee: any) =>
           `"${attendee.fullName}","${attendee.email}","${attendee.status}","${attendee.qrCode}",${attendee.checkedIn ? 'Yes' : 'No'},"${attendee.registeredAt?.toISOString() || ''}"`,
       )
       .join('\n');
