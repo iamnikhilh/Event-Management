@@ -12,6 +12,7 @@ import { Loader2 } from "lucide-react";
 import { api, type Envelope } from "@/lib/api-client";
 import { tokenStore } from "@/lib/tokens";
 import type { User } from "@/lib/types";
+import logo from "/logo.svg";
 
 export const Route = createFileRoute("/signup")({
   component: SignupPage,
@@ -85,10 +86,8 @@ function SignupPage() {
     <div className="grid min-h-screen md:grid-cols-2">
       <div className="hidden bg-gradient-to-br from-primary via-primary/90 to-accent p-12 text-primary-foreground md:flex md:flex-col md:justify-between">
         <Link to="/" className="flex items-center gap-2">
-          <div className="grid h-8 w-8 place-items-center rounded-md bg-primary-foreground text-primary font-semibold">
-            E
-          </div>
-          <span className="font-semibold">Eventide</span>
+          <img src={logo} alt="EventMatrix" className="h-12 w-12 object-contain invert" />
+          <span className="font-semibold">EventMatrix</span>
         </Link>
         <div>
           <h2 className="max-w-md text-3xl font-semibold leading-tight">
@@ -98,15 +97,13 @@ function SignupPage() {
             Join thousands of event organizers managing their events seamlessly.
           </p>
         </div>
-        <div className="text-xs opacity-70">© Eventide</div>
+        <div className="text-xs opacity-70">© EventMatrix</div>
       </div>
       <div className="flex items-center justify-center p-6">
         <div className="w-full max-w-sm">
           <div className="mb-8 flex items-center gap-2 md:hidden">
-            <div className="grid h-8 w-8 place-items-center rounded-md bg-primary text-primary-foreground font-semibold">
-              E
-            </div>
-            <span className="font-semibold">Eventide</span>
+            <img src="/logo.svg" alt="EventMatrix" className="h-10 w-10 object-contain" />
+            <span className="font-semibold">EventMatrix</span>
           </div>
           <h1 className="text-2xl font-semibold tracking-tight">Create account</h1>
           <p className="mt-1 text-sm text-muted-foreground">

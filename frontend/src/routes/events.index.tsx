@@ -7,13 +7,14 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { LoadingBlock, EmptyState } from "@/components/ui-blocks";
 import { Calendar, MapPin, Search } from "lucide-react";
+import logo from "/logo.svg";
 
 export const Route = createFileRoute("/events/")({
   head: () => ({
     meta: [
-      { title: "Browse events — Eventide" },
+      { title: "Browse events — EventMatrix" },
       { name: "description", content: "Discover upcoming conferences, meetups, and festivals." },
-      { property: "og:title", content: "Browse events — Eventide" },
+      { property: "og:title", content: "Browse events — EventMatrix" },
       { property: "og:description", content: "Find and register for upcoming events." },
     ],
   }),
@@ -33,10 +34,8 @@ function PublicEvents() {
       <header className="border-b bg-card">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-5">
           <Link to="/" className="flex items-center gap-2">
-            <div className="grid h-8 w-8 place-items-center rounded-md bg-primary text-primary-foreground font-semibold">
-              E
-            </div>
-            <span className="font-semibold tracking-tight">Eventide</span>
+            <img src="/logo.svg" alt="EventMatrix" className="h-10 w-10 object-contain" />
+            <span className="font-semibold tracking-tight">EventMatrix</span>
           </Link>
           <Button asChild size="sm" variant="ghost">
             <Link to="/login">Sign in</Link>

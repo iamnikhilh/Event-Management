@@ -38,10 +38,8 @@ export function DashboardShell({ children }: { children: ReactNode }) {
     <div className="flex min-h-screen bg-background">
       <aside className="hidden w-64 flex-col border-r bg-sidebar md:flex">
         <div className="flex h-16 items-center gap-2 border-b px-6">
-          <div className="grid h-8 w-8 place-items-center rounded-md bg-primary text-primary-foreground font-semibold">
-            E
-          </div>
-          <span className="font-semibold tracking-tight">Eventide</span>
+          <img src="/logo.svg" alt="EventMatrix" className="h-10 w-10 object-contain" />
+          <span className="font-semibold tracking-tight">EventMatrix</span>
         </div>
         <nav className="flex-1 space-y-1 p-3">
           {nav.map((item) => (
@@ -88,10 +86,8 @@ export function DashboardShell({ children }: { children: ReactNode }) {
       <div className="flex flex-1 flex-col">
         <header className="flex h-16 items-center justify-between border-b bg-card px-4 md:px-8">
           <div className="flex items-center gap-2 md:hidden">
-            <div className="grid h-8 w-8 place-items-center rounded-md bg-primary text-primary-foreground font-semibold">
-              E
-            </div>
-            <span className="font-semibold">Eventide</span>
+            <img src="/logo.svg" alt="EventMatrix" className="h-10 w-10 object-contain" />
+            <span className="font-semibold">EventMatrix</span>
           </div>
           <div className="ml-auto flex items-center gap-3">
             <Button asChild variant="ghost" size="sm">

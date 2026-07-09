@@ -6,7 +6,6 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { eq, and, count, or, ilike, desc } from 'drizzle-orm';
-import { nanoid } from 'nanoid';
 
 import { DATABASE_CONNECTION } from '../../database/database.constants';
 import { Database } from '../../database/database.types';
@@ -51,7 +50,8 @@ export class AttendeesService {
   ) {
     await this.ticketTypesService.findOne(eventId, dto.ticketTypeId);
 
-    const qrCode = nanoid();
+    // Generate a random QR code (using Math.random since nanoid is ESM)
+    const qrCode = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
     const availableQuantity =
       await this.ticketTypesService.getAvailableQuantity(dto.ticketTypeId);
 
@@ -107,10 +107,11 @@ export class AttendeesService {
     const { page, limit, search, status } = query;
     const offset = (page - 1) * limit;
 
-    const filters: any[] = [eq(attendees.eventId, eventId)];
+    // Build where clause dynamically
+    const conditions: any[] = [eq(attendees.eventId, eventId)];
 
     if (search) {
-      filters.push(
+      conditions.push(
         or(
           ilike(attendees.fullName, `%${search}%`),
           ilike(attendees.email, `%${search}%`),
@@ -119,10 +120,10 @@ export class AttendeesService {
     }
 
     if (status) {
-      filters.push(eq(attendees.status, status));
+      conditions.push(eq(attendees.status, status));
     }
 
-    const whereClause = and(...filters);
+    const whereClause = and(...conditions);
 
     const [{ totalItems }] = await this.db
       .select({ totalItems: count() })
@@ -231,7 +232,7 @@ export class AttendeesService {
     const headers = 'Full Name,Email,Status,QR Code,Checked In,Registered At\n';
     const rows = allAttendees
       .map(
-        (attendee) =>
+        (attendee: any) =>
           `"${attendee.fullName}","${attendee.email}","${attendee.status}","${attendee.qrCode}",${attendee.checkedIn ? 'Yes' : 'No'},"${attendee.registeredAt?.toISOString() || ''}"`,
       )
       .join('\n');

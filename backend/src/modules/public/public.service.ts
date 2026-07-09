@@ -25,16 +25,16 @@ export class PublicService {
       const { page, limit, search } = query;
       const offset = (page - 1) * limit;
 
-      const filters: any[] = [
+      const conditions: any[] = [
         eq(events.isPublic, true),
         ne(events.status, EventStatusValues.DRAFT),
       ];
 
       if (search) {
-        filters.push(ilike(events.title, `%${search}%`));
+        conditions.push(ilike(events.title, `%${search}%`));
       }
 
-      const whereClause = and(...filters);
+      const whereClause = and(...conditions);
 
       let totalItems = 0;
       try {

@@ -23,9 +23,9 @@ import { Calendar, MapPin, CheckCircle2, Clock } from "lucide-react";
 export const Route = createFileRoute("/events/$slug")({
   head: ({ params }) => ({
     meta: [
-      { title: `${params.slug} — Eventide` },
+      { title: `${params.slug} — EventMatrix` },
       { name: "description", content: "Event details and registration." },
-      { property: "og:title", content: `${params.slug} — Eventide` },
+      { property: "og:title", content: `${params.slug} — EventMatrix` },
       { property: "og:description", content: "Event details and registration." },
     ],
   }),
@@ -75,10 +75,8 @@ function PublicEvent() {
       <header className="border-b bg-card">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-5">
           <Link to="/" className="flex items-center gap-2">
-            <div className="grid h-8 w-8 place-items-center rounded-md bg-primary text-primary-foreground font-semibold">
-              E
-            </div>
-            <span className="font-semibold tracking-tight">Eventide</span>
+            <img src="/logo.svg" alt="EventMatrix" className="h-10 w-10 object-contain" />
+            <span className="font-semibold tracking-tight">EventMatrix</span>
           </Link>
           <Button asChild size="sm" variant="ghost">
             <Link to="/events">All events</Link>

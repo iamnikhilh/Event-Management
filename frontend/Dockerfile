@@ -1,5 +1,5 @@
 # Build stage
-FROM node:20-alpine AS builder
+FROM node:22-alpine AS builder
 
 WORKDIR /app
 
@@ -7,7 +7,7 @@ WORKDIR /app
 COPY package*.json ./
 
 # Install dependencies
-RUN npm ci && npm cache clean --force
+RUN npm install && npm cache clean --force
 
 # Copy source code
 COPY . .
@@ -31,11 +31,11 @@ COPY --from=builder /app/dist /usr/share/nginx/html
 RUN rm -rf /var/cache/nginx /var/log/nginx/*
 
 # Expose port
-EXPOSE 80
+EXPOSE 5173
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD wget --quiet --tries=1 --spider http://localhost/ || exit 1
+  CMD wget --quiet --tries=1 --spider http://localhost:5173/ || exit 1
 
 # Start nginx
 CMD ["nginx", "-g", "daemon off;"]

@@ -35,13 +35,13 @@ export class NotificationsService {
     const { page, limit, isRead } = query;
     const offset = (page - 1) * limit;
 
-    const filters: any[] = [eq(notifications.userId, userId)];
+    const conditions: any[] = [eq(notifications.userId, userId)];
 
     if (isRead !== undefined) {
-      filters.push(eq(notifications.isRead, isRead));
+      conditions.push(eq(notifications.isRead, isRead));
     }
 
-    const whereClause = and(...filters);
+    const whereClause = and(...conditions);
 
     const [{ totalItems }] = await this.db
       .select({ totalItems: count() })
