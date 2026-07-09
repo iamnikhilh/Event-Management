@@ -4,10 +4,13 @@ import { useState } from "react";
 import { publicApi } from "@/lib/api";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { LoadingBlock, EmptyState } from "@/components/ui-blocks";
-import { Calendar, MapPin, Search } from "lucide-react";
-import logo from "/logo.svg";
+import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/ui-blocks";
+import { EventCard } from "@/components/public/event-card";
+import { PublicHeader } from "@/components/public/public-header";
+import { PublicAmbientBackground, PublicMotionStyles } from "@/components/public/public-motion";
+import { useDebounce } from "@/hooks/use-debounce";
+import { Search, Sparkles, Ticket } from "lucide-react";
 
 export const Route = createFileRoute("/events/")({
   head: () => ({
@@ -21,91 +24,119 @@ export const Route = createFileRoute("/events/")({
   component: PublicEvents,
 });
 
+function EventCardSkeleton() {
+  return (
+    <div className="overflow-hidden rounded-2xl border bg-card">
+      <Skeleton className="aspect-[16/9] w-full rounded-none" />
+      <div className="space-y-3 p-5">
+        <Skeleton className="h-4 w-full" />
+        <Skeleton className="h-4 w-3/4" />
+        <Skeleton className="h-3 w-1/2" />
+      </div>
+    </div>
+  );
+}
+
 function PublicEvents() {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
+  const debouncedSearch = useDebounce(search, 350);
+
   const q = useQuery({
-    queryKey: ["public", "events", { page, search }],
-    queryFn: () => publicApi.events({ page, limit: 12, search: search || undefined }),
+    queryKey: ["public", "events", { page, search: debouncedSearch }],
+    queryFn: () =>
+      publicApi.events({ page, limit: 12, search: debouncedSearch || undefined }),
   });
 
-  return (
-    <div className="min-h-screen bg-background">
-      <header className="border-b bg-card">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-5">
-          <Link to="/" className="flex items-center gap-2">
-            <img src="/logo.svg" alt="EventMatrix" className="h-10 w-10 object-contain" />
-            <span className="font-semibold tracking-tight">EventMatrix</span>
-          </Link>
-          <Button asChild size="sm" variant="ghost">
-            <Link to="/login">Sign in</Link>
-          </Button>
-        </div>
-      </header>
+  const totalItems = q.data?.pagination.totalItems ?? 0;
 
-      <main className="mx-auto max-w-6xl px-6 py-10">
-        <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-semibold tracking-tight">Upcoming events</h1>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Register in seconds. Get in the room.
+  return (
+    <div className="relative min-h-screen bg-gradient-to-b from-background via-background to-secondary/30">
+      <PublicMotionStyles />
+      <PublicAmbientBackground />
+      <PublicHeader />
+
+      <main className="relative z-10 mx-auto max-w-6xl px-6 pb-20">
+        {/* Hero */}
+        <section className="em-in py-12 md:py-16">
+          <div className="mx-auto max-w-2xl text-center">
+            <div className="mx-auto inline-flex items-center gap-2 rounded-full border bg-card/80 px-4 py-1.5 text-xs text-muted-foreground backdrop-blur-sm">
+              <Sparkles className="h-3.5 w-3.5 text-primary" />
+              {q.isLoading ? "Loading events…" : `${totalItems} event${totalItems === 1 ? "" : "s"} to explore`}
+            </div>
+            <h1 className="mt-5 text-4xl font-semibold tracking-tight md:text-5xl">
+              Discover events
+              <span className="block text-primary">worth showing up for</span>
+            </h1>
+            <p className="mt-4 text-base text-muted-foreground md:text-lg">
+              Conferences, festivals, meetups — find your next experience and register in seconds.
             </p>
           </div>
-          <div className="relative w-full sm:w-80">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+
+          <div className="em-in relative mx-auto mt-8 max-w-xl" style={{ animationDelay: "100ms" }}>
+            <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
-              className="pl-9"
-              placeholder="Search events…"
+              className="h-12 rounded-full border-border/80 bg-card/80 pl-11 pr-4 text-base shadow-sm backdrop-blur-sm transition-shadow focus-visible:shadow-md focus-visible:shadow-primary/10"
+              placeholder="Search by title, venue, or city…"
               value={search}
-              onChange={(e) => { setPage(1); setSearch(e.target.value); }}
+              onChange={(e) => {
+                setPage(1);
+                setSearch(e.target.value);
+              }}
             />
           </div>
-        </div>
+        </section>
 
-        {q.isLoading && <LoadingBlock />}
-        {q.data && q.data.items.length === 0 && (
-          <EmptyState title="No events found" description="Try a different search." />
+        {/* Grid */}
+        {q.isLoading && (
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <EventCardSkeleton key={i} />
+            ))}
+          </div>
         )}
 
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {q.data?.items.map((e) => (
-            <Link
-              key={e.id}
-              to="/events/$slug"
-              params={{ slug: e.slug }}
-              className="group rounded-xl border bg-card p-5 transition-colors hover:border-primary/40"
-            >
-              <Badge variant="secondary" className="mb-2">{e.status}</Badge>
-              <h3 className="text-lg font-semibold group-hover:text-primary">{e.title}</h3>
-              <p className="mt-2 line-clamp-2 text-sm text-muted-foreground">
-                {e.description || "No description yet."}
-              </p>
-              <div className="mt-4 flex flex-col gap-1 text-xs text-muted-foreground">
-                <span className="inline-flex items-center gap-1.5">
-                  <Calendar className="h-3.5 w-3.5" /> {new Date(e.eventDate).toLocaleString()}
-                </span>
-                {e.venue && (
-                  <span className="inline-flex items-center gap-1.5">
-                    <MapPin className="h-3.5 w-3.5" /> {e.venue}
-                  </span>
-                )}
-              </div>
-            </Link>
-          ))}
-        </div>
+        {q.data && q.data.items.length === 0 && (
+          <EmptyState
+            title="No events found"
+            description={
+              debouncedSearch
+                ? `Nothing matched "${debouncedSearch}". Try a different search.`
+                : "Check back soon — new events are added regularly."
+            }
+          />
+        )}
 
+        {q.data && q.data.items.length > 0 && (
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {q.data.items.map((e, i) => (
+              <EventCard key={e.id} event={e} index={i} />
+            ))}
+          </div>
+        )}
+
+        {/* Pagination */}
         {q.data && q.data.pagination.totalPages > 1 && (
-          <div className="mt-8 flex items-center justify-between text-sm">
-            <span className="text-muted-foreground">
+          <div className="em-in mt-12 flex flex-col items-center gap-4 sm:flex-row sm:justify-between">
+            <span className="text-sm text-muted-foreground">
               Page {q.data.pagination.page} of {q.data.pagination.totalPages}
+              <span className="mx-2 text-border">·</span>
+              {q.data.pagination.totalItems} total
             </span>
             <div className="flex gap-2">
-              <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
+              <Button
+                variant="outline"
+                size="sm"
+                className="rounded-full"
+                disabled={page <= 1}
+                onClick={() => setPage((p) => p - 1)}
+              >
                 Previous
               </Button>
               <Button
                 variant="outline"
                 size="sm"
+                className="rounded-full"
                 disabled={page >= q.data.pagination.totalPages}
                 onClick={() => setPage((p) => p + 1)}
               >
@@ -114,6 +145,30 @@ function PublicEvents() {
             </div>
           </div>
         )}
+
+        {/* Bottom CTA strip */}
+        <section
+          className="em-in relative mt-16 overflow-hidden rounded-2xl border bg-card/80 p-8 text-center backdrop-blur-sm md:p-10"
+          style={{ animationDelay: "200ms" }}
+        >
+          <div
+            className="pointer-events-none absolute inset-0"
+            style={{
+              background:
+                "radial-gradient(500px circle at 50% 0%, color-mix(in oklch, var(--primary) 15%, transparent), transparent 60%)",
+            }}
+          />
+          <Ticket className="relative mx-auto h-8 w-8 text-primary" />
+          <h2 className="relative mt-4 text-xl font-semibold md:text-2xl">
+            Running your own event?
+          </h2>
+          <p className="relative mx-auto mt-2 max-w-md text-sm text-muted-foreground">
+            Create, sell tickets, and manage attendees from one dashboard.
+          </p>
+          <Button asChild className="relative mt-6 rounded-full shadow-sm shadow-primary/20">
+            <Link to="/login">Get started free</Link>
+          </Button>
+        </section>
       </main>
     </div>
   );

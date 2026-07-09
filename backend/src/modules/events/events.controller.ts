@@ -11,7 +11,6 @@ import {
 } from '@nestjs/common';
 import { ApiBearerAuth } from '@nestjs/swagger';
 
-import { Public } from '../../common/decorators/public.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -30,17 +29,19 @@ export class EventsController {
   @Post()
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin', 'organizer')
   create(@CurrentUser() user: AuthenticatedUser, @Body() dto: CreateEventDto) {
-    return this.eventsService.create(user.sub, dto);
+    return this.eventsService.create(user, dto);
   }
 
-  @Public()
   @Get()
-  list(@Query() query: ListEventsDto, @CurrentUser() user?: AuthenticatedUser) {
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin', 'organizer')
+  list(@Query() query: ListEventsDto, @CurrentUser() user: AuthenticatedUser) {
     return this.eventsService.list(query, user);
   }
 
-  @Public()
   @Get('stats')
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, RolesGuard)
@@ -49,39 +50,42 @@ export class EventsController {
     return this.eventsService.stats(user);
   }
 
-  @Public()
   @Get('recent')
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin', 'organizer', 'attendee')
-  recent(@Query() query: RecentEventsQueryDto, @CurrentUser() user: AuthenticatedUser) {
+  recent(
+    @Query() query: RecentEventsQueryDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
     return this.eventsService.recent(query, user);
   }
 
-  @Public()
   @Get(':id')
-  findOne(@Param('id') id: string, @CurrentUser() user?: AuthenticatedUser) {
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin', 'organizer')
+  findOne(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser) {
     return this.eventsService.findOne(id, user);
   }
 
   @Patch(':id')
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin', 'organizer')
   update(
     @Param('id') id: string,
     @CurrentUser() user: AuthenticatedUser,
     @Body() dto: UpdateEventDto,
   ) {
-    return this.eventsService.update(id, user.sub, user.role, dto);
+    return this.eventsService.update(id, user, dto);
   }
 
   @Delete(':id')
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, RolesGuard)
-  remove(
-    @Param('id') id: string,
-    @CurrentUser() user: AuthenticatedUser,
-  ) {
-    return this.eventsService.remove(id, user.sub, user.role);
+  @Roles('admin', 'organizer')
+  remove(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser) {
+    return this.eventsService.remove(id, user);
   }
 }

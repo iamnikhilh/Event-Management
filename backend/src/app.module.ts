@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 
+import { CommonModule } from './common/common.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { DatabaseModule } from './database/database.module';
 import { SupabaseModule } from './database/supabase.module';
@@ -24,6 +25,7 @@ import { EmailModule } from './modules/email/email.module';
       envFilePath: ['.env', '.env.local'],
     }),
     DatabaseModule,
+    CommonModule,
     SupabaseModule,
     AuthModule,
     UsersModule,

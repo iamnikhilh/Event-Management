@@ -1,20 +1,26 @@
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 
+import { OrganizerScopeService } from '../../common/services/organizer-scope.service';
 import { DATABASE_CONNECTION } from '../../database/database.constants';
 import { Database } from '../../database/database.types';
 import { speakers } from '../../database/schema';
+import { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
 import { CreateSpeakerDto } from './dto/create-speaker.dto';
 import { UpdateSpeakerDto } from './dto/update-speaker.dto';
 
 @Injectable()
 export class SpeakersService {
-  constructor(@Inject(DATABASE_CONNECTION) private readonly db: Database) {}
+  constructor(
+    @Inject(DATABASE_CONNECTION) private readonly db: Database,
+    private readonly organizerScope: OrganizerScopeService,
+  ) {}
 
-  async create(dto: CreateSpeakerDto) {
+  async create(dto: CreateSpeakerDto, user: AuthenticatedUser) {
     const [createdSpeaker] = await this.db
       .insert(speakers)
       .values({
+        organizerId: user.sub,
         name: dto.name.trim(),
         title: dto.title.trim(),
         company: dto.company.trim(),
@@ -26,15 +32,33 @@ export class SpeakersService {
     return createdSpeaker;
   }
 
-  async findAll() {
+  async findAll(user: AuthenticatedUser) {
+    const organizerFilter = this.organizerScope.organizerFilter(
+      user,
+      speakers.organizerId,
+    );
+
+    if (organizerFilter) {
+      return this.db.select().from(speakers).where(organizerFilter);
+    }
+
     return this.db.select().from(speakers);
   }
 
-  async findOne(id: string) {
+  async findOne(id: string, user: AuthenticatedUser) {
+    const organizerFilter = this.organizerScope.organizerFilter(
+      user,
+      speakers.organizerId,
+    );
+    const conditions = [eq(speakers.id, id)];
+    if (organizerFilter) {
+      conditions.push(organizerFilter);
+    }
+
     const [speaker] = await this.db
       .select()
       .from(speakers)
-      .where(eq(speakers.id, id))
+      .where(and(...conditions))
       .limit(1);
 
     if (!speaker) {
@@ -44,10 +68,17 @@ export class SpeakersService {
     return speaker;
   }
 
-  async update(id: string, dto: UpdateSpeakerDto) {
-    await this.findOne(id);
+  async update(id: string, dto: UpdateSpeakerDto, user: AuthenticatedUser) {
+    const organizerFilter = this.organizerScope.organizerFilter(
+      user,
+      speakers.organizerId,
+    );
+    const conditions = [eq(speakers.id, id)];
+    if (organizerFilter) {
+      conditions.push(organizerFilter);
+    }
 
-    await this.db
+    const updated = await this.db
       .update(speakers)
       .set({
         ...(dto.name ? { name: dto.name.trim() } : {}),
@@ -57,14 +88,34 @@ export class SpeakersService {
         ...(dto.photoUrl !== undefined ? { photoUrl: dto.photoUrl } : {}),
         updatedAt: new Date(),
       })
-      .where(eq(speakers.id, id));
+      .where(and(...conditions))
+      .returning({ id: speakers.id });
 
-    return this.findOne(id);
+    if (!updated.length) {
+      throw new NotFoundException('Speaker not found');
+    }
+
+    return this.findOne(id, user);
   }
 
-  async remove(id: string) {
-    await this.findOne(id);
-    await this.db.delete(speakers).where(eq(speakers.id, id));
+  async remove(id: string, user: AuthenticatedUser) {
+    const organizerFilter = this.organizerScope.organizerFilter(
+      user,
+      speakers.organizerId,
+    );
+    const conditions = [eq(speakers.id, id)];
+    if (organizerFilter) {
+      conditions.push(organizerFilter);
+    }
+
+    const deleted = await this.db
+      .delete(speakers)
+      .where(and(...conditions))
+      .returning({ id: speakers.id });
+
+    if (!deleted.length) {
+      throw new NotFoundException('Speaker not found');
+    }
 
     return { message: 'Speaker deleted' };
   }

@@ -41,8 +41,11 @@ export class TicketTypesController {
   @Get()
   @Roles('admin', 'organizer', 'attendee')
   @ResponseMessage('Ticket types retrieved successfully')
-  findAll(@Param('eventId') eventId: string) {
-    return this.ticketTypesService.findAllByEvent(eventId);
+  findAll(
+    @Param('eventId') eventId: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.ticketTypesService.findAllByEvent(eventId, user);
   }
 
   @Patch(':id')

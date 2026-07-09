@@ -1,6 +1,7 @@
-import { Inject, Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { eq, and, count, sql } from 'drizzle-orm';
 
+import { OrganizerScopeService } from '../../common/services/organizer-scope.service';
 import { DATABASE_CONNECTION } from '../../database/database.constants';
 import { Database } from '../../database/database.types';
 import {
@@ -8,59 +9,44 @@ import {
   events,
   ticketTypes,
   TicketStatusValues,
-  UserRoleValues,
 } from '../../database/schema';
 import { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
 
 @Injectable()
 export class AnalyticsService {
-  constructor(@Inject(DATABASE_CONNECTION) private readonly db: Database) {}
-
-  private async verifyEventAccess(eventId: string, user: AuthenticatedUser): Promise<void> {
-    const [event] = await this.db
-      .select()
-      .from(events)
-      .where(eq(events.id, eventId))
-      .limit(1);
-
-    if (!event) {
-      throw new NotFoundException('Event not found');
-    }
-
-    // Admin can access all events, organizers can only access their own
-    if (user.role !== UserRoleValues.ADMIN && event.createdById !== user.sub) {
-      throw new ForbiddenException('You do not have access to this event');
-    }
-  }
+  constructor(
+    @Inject(DATABASE_CONNECTION) private readonly db: Database,
+    private readonly organizerScope: OrganizerScopeService,
+  ) {}
 
   async getEventAnalytics(eventId: string, user: AuthenticatedUser) {
-    await this.verifyEventAccess(eventId, user);
+    await this.organizerScope.verifyEventManageAccess(eventId, user);
+
+    const organizerFilter = this.organizerScope.organizerFilter(
+      user,
+      attendees.organizerId,
+    );
+    const attendeeScope = organizerFilter
+      ? and(eq(attendees.eventId, eventId), organizerFilter)
+      : eq(attendees.eventId, eventId);
 
     const [{ totalRegistered }] = await this.db
       .select({ totalRegistered: count() })
       .from(attendees)
       .where(
-        and(
-          eq(attendees.eventId, eventId),
-          eq(attendees.status, TicketStatusValues.REGISTERED),
-        ),
+        and(attendeeScope, eq(attendees.status, TicketStatusValues.REGISTERED)),
       );
 
     const [{ totalCheckedIn }] = await this.db
       .select({ totalCheckedIn: count() })
       .from(attendees)
-      .where(
-        and(eq(attendees.eventId, eventId), eq(attendees.checkedIn, true)),
-      );
+      .where(and(attendeeScope, eq(attendees.checkedIn, true)));
 
     const [{ waitlistCount }] = await this.db
       .select({ waitlistCount: count() })
       .from(attendees)
       .where(
-        and(
-          eq(attendees.eventId, eventId),
-          eq(attendees.status, TicketStatusValues.WAITLISTED),
-        ),
+        and(attendeeScope, eq(attendees.status, TicketStatusValues.WAITLISTED)),
       );
 
     const checkInRate =
@@ -72,9 +58,17 @@ export class AnalyticsService {
         count: count(),
       })
       .from(attendees)
-      .where(eq(attendees.eventId, eventId))
+      .where(attendeeScope)
       .groupBy(sql<string>`DATE(${attendees.registeredAt})`)
       .orderBy(sql<string>`DATE(${attendees.registeredAt})`);
+
+    const ticketOrganizerFilter = this.organizerScope.organizerFilter(
+      user,
+      ticketTypes.organizerId,
+    );
+    const ticketScope = ticketOrganizerFilter
+      ? and(eq(ticketTypes.eventId, eventId), ticketOrganizerFilter)
+      : eq(ticketTypes.eventId, eventId);
 
     const ticketBreakdown = await this.db
       .select({
@@ -83,7 +77,7 @@ export class AnalyticsService {
         quantity: ticketTypes.quantity,
       })
       .from(ticketTypes)
-      .where(eq(ticketTypes.eventId, eventId));
+      .where(ticketScope);
 
     return {
       totalRegistered,
@@ -99,17 +93,22 @@ export class AnalyticsService {
   }
 
   async getOverviewAnalytics(user: AuthenticatedUser) {
-    let allEvents;
+    const organizerFilter = this.organizerScope.organizerFilter(
+      user,
+      events.organizerId,
+    );
 
-    // Admin sees all events, organizers see only their own
-    if (user.role === UserRoleValues.ADMIN) {
-      allEvents = await this.db.select().from(events);
-    } else {
-      allEvents = await this.db
-        .select()
-        .from(events)
-        .where(eq(events.createdById, user.sub));
+    if (
+      !this.organizerScope.isAdmin(user) &&
+      !this.organizerScope.isOrganizer(user)
+    ) {
+      throw new NotFoundException('Event not found');
     }
+
+    const allEvents = await this.db
+      .select()
+      .from(events)
+      .where(organizerFilter);
 
     const eventsByStatus = {
       draft: 0,
@@ -125,12 +124,23 @@ export class AnalyticsService {
 
     const eventsWithAttendance = await Promise.all(
       allEvents.map(async (event) => {
+        const attendeeOrganizerFilter = this.organizerScope.organizerFilter(
+          user,
+          attendees.organizerId,
+        );
+        const attendeeScope = attendeeOrganizerFilter
+          ? and(
+              eq(attendees.eventId, event.id),
+              attendeeOrganizerFilter,
+            )
+          : eq(attendees.eventId, event.id);
+
         const [{ totalAttendees }] = await this.db
           .select({ totalAttendees: count() })
           .from(attendees)
           .where(
             and(
-              eq(attendees.eventId, event.id),
+              attendeeScope,
               eq(attendees.status, TicketStatusValues.REGISTERED),
             ),
           );

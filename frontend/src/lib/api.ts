@@ -17,8 +17,15 @@ export interface Paginated<T> {
   pagination: { page: number; limit: number; totalItems: number; totalPages: number };
 }
 
-async function paginated<T>(path: string, query: Record<string, unknown>): Promise<Paginated<T>> {
-  const res = await api<Envelope<T[]>>(path, { query: query as Record<string, string | number> });
+async function paginated<T>(
+  path: string,
+  query: Record<string, unknown>,
+  options?: { auth?: boolean },
+): Promise<Paginated<T>> {
+  const res = await api<Envelope<T[]>>(path, {
+    query: query as Record<string, string | number>,
+    auth: options?.auth,
+  });
   return {
     items: res.data ?? [],
     pagination:
@@ -153,7 +160,7 @@ export const analyticsApi = {
 // Public
 export const publicApi = {
   events: (params: { page?: number; limit?: number; search?: string }) =>
-    paginated<EventItem>("/public/events", { page: 1, limit: 10, ...params }),
+    paginated<EventItem>("/public/events", { page: 1, limit: 10, ...params }, { auth: false }),
   eventBySlug: (slug: string) =>
     api<
       Envelope<

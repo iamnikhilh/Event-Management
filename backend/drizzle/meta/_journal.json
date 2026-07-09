@@ -15,6 +15,13 @@
       "when": 1783339441423,
       "tag": "0001_bumpy_sauron",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1783500000000,
+      "tag": "0002_organizer_scoping",
+      "breakpoints": true
     }
   ]
 }
