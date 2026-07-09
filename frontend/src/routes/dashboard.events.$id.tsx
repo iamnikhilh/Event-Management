@@ -4,20 +4,14 @@ import { eventsApi } from "@/lib/api";
 import { LoadingBlock, ErrorBlock } from "@/components/ui-blocks";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Pencil, ChevronLeft } from "lucide-react";
+import { Pencil, ChevronLeft, Calendar, MapPin } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { STATUS_STYLES, statusLabel, eventGradient } from "@/components/public/event-utils";
+import { resolveImageUrl } from "@/lib/images";
 
 export const Route = createFileRoute("/dashboard/events/$id")({
   component: EventDetailLayout,
 });
-
-const STATUS_COLORS: Record<string, string> = {
-  upcoming: "bg-primary/10 text-primary",
-  active: "bg-green-500/10 text-green-700",
-  completed: "bg-muted text-muted-foreground",
-  draft: "bg-amber-500/10 text-amber-700",
-  cancelled: "bg-destructive/10 text-destructive",
-};
 
 function EventDetailLayout() {
   const { id } = Route.useParams();
@@ -38,7 +32,7 @@ function EventDetailLayout() {
 
   return (
     <div>
-      <Button asChild variant="ghost" size="sm" className="mb-4 -ml-2">
+      <Button asChild variant="ghost" size="sm" className="mb-4 -ml-2 rounded-full">
         <Link to="/dashboard/events">
           <ChevronLeft className="mr-1 h-4 w-4" /> All events
         </Link>
@@ -48,37 +42,63 @@ function EventDetailLayout() {
       {q.error && <ErrorBlock error={q.error} />}
       {q.data && (
         <>
-          <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
-            <div>
-              <div className="flex items-center gap-3">
-                <h1 className="text-2xl font-semibold tracking-tight">{q.data.title}</h1>
-                <Badge variant="secondary" className={STATUS_COLORS[q.data.status]}>
-                  {q.data.status}
-                </Badge>
+          <div className="relative mb-6 overflow-hidden rounded-2xl border bg-card/80 shadow-sm backdrop-blur-sm">
+            <div
+              className="h-2 w-full"
+              style={{
+                background: q.data.bannerImage
+                  ? `url(${resolveImageUrl(q.data.bannerImage)}) center/cover`
+                  : eventGradient(q.data.slug),
+              }}
+            />
+            <div className="flex flex-wrap items-start justify-between gap-4 p-6">
+              <div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">
+                    {q.data.title}
+                  </h1>
+                  <Badge
+                    variant="outline"
+                    className={STATUS_STYLES[q.data.status] ?? STATUS_STYLES.upcoming}
+                  >
+                    {statusLabel(q.data.status)}
+                  </Badge>
+                </div>
+                <div className="mt-2 flex flex-wrap gap-4 text-sm text-muted-foreground">
+                  <span className="inline-flex items-center gap-1.5">
+                    <Calendar className="h-4 w-4 text-primary" />
+                    {new Date(q.data.eventDate).toLocaleString()}
+                  </span>
+                  {q.data.venue && (
+                    <span className="inline-flex items-center gap-1.5">
+                      <MapPin className="h-4 w-4 text-primary" />
+                      {q.data.venue}
+                    </span>
+                  )}
+                </div>
               </div>
-              <p className="mt-1 text-sm text-muted-foreground">
-                {new Date(q.data.eventDate).toLocaleString()} · {q.data.venue || "Venue TBD"}
-              </p>
+              <Button asChild variant="outline" size="sm" className="rounded-full">
+                <Link to="/dashboard/events/$id/edit" params={{ id }}>
+                  <Pencil className="mr-1.5 h-4 w-4" /> Edit event
+                </Link>
+              </Button>
             </div>
-            <Button asChild variant="outline" size="sm">
-              <Link to="/dashboard/events/$id/edit" params={{ id }}>
-                <Pencil className="mr-1 h-4 w-4" /> Edit
-              </Link>
-            </Button>
           </div>
 
-          <div className="mb-6 flex flex-wrap gap-1 border-b">
+          <div className="mb-6 flex flex-wrap gap-2">
             {tabs.map((t) => {
-              const active = t.exact ? loc.pathname === t.to : loc.pathname.startsWith(t.to);
+              const active = t.exact
+                ? loc.pathname === t.to
+                : loc.pathname.startsWith(t.to);
               return (
                 <Link
                   key={t.to}
                   to={t.to}
                   className={cn(
-                    "px-3 py-2 text-sm font-medium border-b-2 -mb-px transition-colors",
+                    "rounded-full px-4 py-2 text-sm font-medium transition-all",
                     active
-                      ? "border-primary text-foreground"
-                      : "border-transparent text-muted-foreground hover:text-foreground",
+                      ? "bg-primary text-primary-foreground shadow-sm shadow-primary/25"
+                      : "bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground",
                   )}
                 >
                   {t.label}

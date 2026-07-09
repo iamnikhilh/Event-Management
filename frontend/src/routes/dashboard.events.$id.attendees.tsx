@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Download, QrCode, Search, Trash2, CheckCircle2 } from "lucide-react";
-import { EmptyState, LoadingBlock } from "@/components/ui-blocks";
+import { EmptyState, LoadingBlock, FilterBar, Panel } from "@/components/ui-blocks";
 
 export const Route = createFileRoute("/dashboard/events/$id/attendees")({
   component: Attendees,
@@ -80,18 +80,18 @@ function Attendees() {
 
   return (
     <div>
-      <div className="mb-4 flex flex-wrap items-center gap-2">
-        <div className="relative flex-1 min-w-[200px]">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+      <FilterBar>
+        <div className="relative min-w-[200px] flex-1">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            className="pl-9"
+            className="rounded-xl border-0 bg-background/80 pl-9"
             placeholder="Search name or email…"
             value={search}
             onChange={(e) => { setPage(1); setSearch(e.target.value); }}
           />
         </div>
         <Select value={status || "all"} onValueChange={(v) => { setPage(1); setStatus(v === "all" ? "" : v); }}>
-          <SelectTrigger className="w-40"><SelectValue placeholder="Status" /></SelectTrigger>
+          <SelectTrigger className="w-40 rounded-xl border-0 bg-background/80"><SelectValue placeholder="Status" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All statuses</SelectItem>
             <SelectItem value="registered">Registered</SelectItem>
@@ -102,13 +102,14 @@ function Attendees() {
         </Select>
         <Dialog open={scanOpen} onOpenChange={setScanOpen}>
           <DialogTrigger asChild>
-            <Button variant="outline"><QrCode className="mr-1 h-4 w-4" /> Check in</Button>
+            <Button variant="outline" className="rounded-full"><QrCode className="mr-1.5 h-4 w-4" /> Check in</Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-sm">
+          <DialogContent className="rounded-2xl sm:max-w-sm">
             <DialogHeader><DialogTitle>Check in attendee</DialogTitle></DialogHeader>
             <div className="space-y-3">
               <Label>QR code</Label>
               <Input
+                className="rounded-xl"
                 autoFocus
                 placeholder="Scan or paste QR code"
                 value={qr}
@@ -120,16 +121,16 @@ function Attendees() {
               </p>
             </div>
             <DialogFooter>
-              <Button disabled={!qr || checkIn.isPending} onClick={() => checkIn.mutate(qr)}>
-                <CheckCircle2 className="mr-1 h-4 w-4" /> Confirm
+              <Button className="rounded-full" disabled={!qr || checkIn.isPending} onClick={() => checkIn.mutate(qr)}>
+                <CheckCircle2 className="mr-1.5 h-4 w-4" /> Confirm
               </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
-        <Button variant="outline" onClick={exportCsv}>
-          <Download className="mr-1 h-4 w-4" /> Export CSV
+        <Button variant="outline" className="rounded-full" onClick={exportCsv}>
+          <Download className="mr-1.5 h-4 w-4" /> Export CSV
         </Button>
-      </div>
+      </FilterBar>
 
       {list.isLoading && <LoadingBlock />}
       {list.data && list.data.items.length === 0 && (
@@ -137,7 +138,7 @@ function Attendees() {
       )}
 
       {list.data && list.data.items.length > 0 && (
-        <div className="rounded-lg border bg-card">
+        <Panel noPadding>
           <Table>
             <TableHeader>
               <TableRow>
@@ -170,7 +171,7 @@ function Attendees() {
               ))}
             </TableBody>
           </Table>
-        </div>
+        </Panel>
       )}
 
       {list.data && list.data.pagination.totalPages > 1 && (

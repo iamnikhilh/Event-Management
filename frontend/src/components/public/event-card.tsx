@@ -9,6 +9,7 @@ import {
   statusLabel,
   STATUS_STYLES,
 } from "./event-utils";
+import { resolveImageUrl } from "@/lib/images";
 
 type PublicEventCard = EventItem & {
   bannerImage?: string | null;
@@ -30,7 +31,7 @@ export function EventCard({ event, index = 0 }: { event: PublicEventCard; index?
       <div className="relative aspect-[16/9] overflow-hidden">
         {event.bannerImage ? (
           <img
-            src={event.bannerImage}
+            src={resolveImageUrl(event.bannerImage)}
             alt=""
             className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
           />

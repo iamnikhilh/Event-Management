@@ -17,6 +17,7 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
 import { AnalyticsModule } from './modules/analytics/analytics.module';
 import { PublicModule } from './modules/public/public.module';
 import { EmailModule } from './modules/email/email.module';
+import { UploadsModule } from './modules/uploads/uploads.module';
 
 @Module({
   imports: [
@@ -40,6 +41,7 @@ import { EmailModule } from './modules/email/email.module';
     AnalyticsModule,
     PublicModule,
     EmailModule,
+    UploadsModule,
   ],
 })
 export class AppModule {}

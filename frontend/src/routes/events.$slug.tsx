@@ -6,6 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
 import { attendeesApi, publicApi } from "@/lib/api";
+import { resolveImageUrl } from "@/lib/images";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -150,7 +151,7 @@ function PublicEvent() {
       <section className="relative z-10 overflow-hidden border-b">
         <div className="relative h-[280px] md:h-[360px]">
           {e.bannerImage ? (
-            <img src={e.bannerImage} alt="" className="h-full w-full object-cover" />
+            <img src={resolveImageUrl(e.bannerImage)} alt="" className="h-full w-full object-cover" />
           ) : (
             <div className="h-full w-full" style={{ background: eventGradient(e.slug) }} />
           )}
@@ -311,7 +312,7 @@ function PublicEvent() {
                     >
                       {sp.logoUrl ? (
                         <img
-                          src={sp.logoUrl}
+                          src={resolveImageUrl(sp.logoUrl)}
                           alt={sp.name}
                           className="h-10 w-10 rounded-lg bg-white/80 object-contain p-1"
                         />

@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { login } from "@/store/auth-slice";
+import { AuthLayout } from "@/components/auth/auth-layout";
 import { Loader2 } from "lucide-react";
 
 const searchSchema = z.object({
@@ -53,93 +54,77 @@ function LoginPage() {
   };
 
   return (
-    <div className="grid min-h-screen md:grid-cols-2">
-      <div className="hidden bg-gradient-to-br from-primary via-primary/90 to-accent p-12 text-primary-foreground md:flex md:flex-col md:justify-between">
-        <Link to="/" className="flex items-center gap-2">
-          <img src="/logo.svg" alt="EventMatrix" className="h-12 w-12 object-contain invert" />
-          <span className="font-semibold">EventMatrix</span>
-        </Link>
-        <div>
-          <h2 className="max-w-md text-3xl font-semibold leading-tight">
-            "EventMatrix replaced four tools and a shared spreadsheet."
-          </h2>
-          <p className="mt-4 text-sm opacity-80">
-            — Nikhil S H, Head of Community
-          </p>
+    <AuthLayout
+      quote="EventMatrix replaced four tools and a shared spreadsheet."
+      attribution="Nikhil S H, Head of Community"
+    >
+      <h1 className="text-2xl font-semibold tracking-tight">Welcome back</h1>
+      <p className="mt-1 text-sm text-muted-foreground">
+        Sign in to your organizer dashboard.
+      </p>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="mt-6 space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="email">Email</Label>
+          <Input
+            id="email"
+            type="email"
+            placeholder="you@example.com"
+            autoComplete="email"
+            className="h-11 rounded-xl"
+            {...form.register("email")}
+          />
+          {form.formState.errors.email && (
+            <p className="text-xs text-destructive">{form.formState.errors.email.message}</p>
+          )}
         </div>
-        <div className="text-xs opacity-70">© EventMatrix</div>
-      </div>
-      <div className="flex items-center justify-center p-6">
-        <div className="w-full max-w-sm">
-          <div className="mb-8 flex items-center gap-2 md:hidden">
-            <img src="/logo.svg" alt="EventMatrix" className="h-10 w-10 object-contain" />
-            <span className="font-semibold">EventMatrix</span>
-          </div>
-          <h1 className="text-2xl font-semibold tracking-tight">Sign in</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Use your organizer account to continue.
-          </p>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="mt-6 space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="you@example.com"
-                autoComplete="email"
-                {...form.register("email")}
-              />
-              {form.formState.errors.email && (
-                <p className="text-xs text-destructive">
-                  {form.formState.errors.email.message}
-                </p>
-              )}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                autoComplete="current-password"
-                {...form.register("password")}
-              />
-              {form.formState.errors.password && (
-                <p className="text-xs text-destructive">
-                  {form.formState.errors.password.message}
-                </p>
-              )}
-            </div>
-            {error && status === "error" && (
-              <div className="rounded-md border border-destructive/20 bg-destructive/5 p-3 text-xs text-destructive">
-                {error}
-              </div>
-            )}
-            <Button type="submit" className="w-full" disabled={status === "loading"}>
-              {status === "loading" ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Signing in…
-                </>
-              ) : (
-                "Sign in"
-              )}
-            </Button>
-          </form>
-          <div className="mt-6 space-y-3 text-center text-xs text-muted-foreground">
-            <p>
-              Don't have an account?{" "}
-              <Link to="/signup" className="text-primary hover:underline">
-                Create one
-              </Link>
+        <div className="space-y-2">
+          <Label htmlFor="password">Password</Label>
+          <Input
+            id="password"
+            type="password"
+            autoComplete="current-password"
+            className="h-11 rounded-xl"
+            {...form.register("password")}
+          />
+          {form.formState.errors.password && (
+            <p className="text-xs text-destructive">
+              {form.formState.errors.password.message}
             </p>
-            <p>
-              Public event?{" "}
-              <Link to="/events" className="text-primary hover:underline">
-                Browse without signing in
-              </Link>
-            </p>
-          </div>
+          )}
         </div>
+        {error && status === "error" && (
+          <div className="rounded-xl border border-destructive/20 bg-destructive/5 p-3 text-xs text-destructive">
+            {error}
+          </div>
+        )}
+        <Button
+          type="submit"
+          className="h-11 w-full rounded-full"
+          disabled={status === "loading"}
+        >
+          {status === "loading" ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Signing in…
+            </>
+          ) : (
+            "Sign in"
+          )}
+        </Button>
+      </form>
+      <div className="mt-6 space-y-3 text-center text-xs text-muted-foreground">
+        <p>
+          Don&apos;t have an account?{" "}
+          <Link to="/signup" className="font-medium text-primary hover:underline">
+            Create one
+          </Link>
+        </p>
+        <p>
+          Just browsing?{" "}
+          <Link to="/events" className="font-medium text-primary hover:underline">
+            Explore public events
+          </Link>
+        </p>
       </div>
-    </div>
+    </AuthLayout>
   );
 }

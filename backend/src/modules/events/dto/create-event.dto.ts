@@ -4,7 +4,6 @@ import {
   IsInt,
   IsOptional,
   IsString,
-  IsUrl,
   IsUUID,
   IsBoolean,
   Length,
@@ -54,7 +53,7 @@ export class CreateEventDto {
   status?: EventStatus;
 
   @IsOptional()
-  @IsUrl()
+  @IsString()
   bannerImage?: string;
 
   @IsOptional()

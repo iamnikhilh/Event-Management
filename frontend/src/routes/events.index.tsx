@@ -54,7 +54,7 @@ function PublicEvents() {
     <div className="relative min-h-screen bg-gradient-to-b from-background via-background to-secondary/30">
       <PublicMotionStyles />
       <PublicAmbientBackground />
-      <PublicHeader />
+      <PublicHeader showBrowseEvents />
 
       <main className="relative z-10 mx-auto max-w-6xl px-6 pb-20">
         {/* Hero */}

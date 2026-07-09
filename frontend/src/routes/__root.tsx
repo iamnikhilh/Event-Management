@@ -14,19 +14,29 @@ import { Toaster } from "@/components/ui/sonner";
 
 function NotFoundComponent() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
-      <div className="max-w-md text-center">
-        <h1 className="text-7xl font-bold text-foreground">404</h1>
-        <h2 className="mt-4 text-xl font-semibold text-foreground">Page not found</h2>
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-gradient-to-b from-background to-secondary/30 px-4">
+      <div className="pointer-events-none absolute inset-0">
+        <div className="absolute -left-20 top-20 h-64 w-64 rounded-full bg-primary/10 blur-3xl" />
+        <div className="absolute -right-20 bottom-20 h-64 w-64 rounded-full bg-secondary/40 blur-3xl" />
+      </div>
+      <div className="relative max-w-md text-center">
+        <p className="text-8xl font-bold tracking-tighter text-primary/20">404</p>
+        <h1 className="mt-2 text-2xl font-semibold">Page not found</h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          The page you're looking for doesn't exist or has been moved.
+          The page you&apos;re looking for doesn&apos;t exist or has been moved.
         </p>
-        <div className="mt-6">
+        <div className="mt-8 flex justify-center gap-3">
           <Link
             to="/"
-            className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+            className="inline-flex items-center justify-center rounded-full bg-primary px-6 py-2.5 text-sm font-medium text-primary-foreground shadow-sm shadow-primary/20 transition-colors hover:bg-primary/90"
           >
             Go home
+          </Link>
+          <Link
+            to="/events"
+            className="inline-flex items-center justify-center rounded-full border px-6 py-2.5 text-sm font-medium transition-colors hover:bg-muted"
+          >
+            Browse events
           </Link>
         </div>
       </div>
@@ -39,30 +49,31 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   const router = useRouter();
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
-      <div className="max-w-md text-center">
-        <h1 className="text-xl font-semibold tracking-tight text-foreground">
-          This page didn't load
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-gradient-to-b from-background to-secondary/30 px-4">
+      <div className="relative max-w-md text-center">
+        <p className="text-6xl font-bold text-destructive/20">!</p>
+        <h1 className="mt-2 text-xl font-semibold tracking-tight">
+          This page didn&apos;t load
         </h1>
         <p className="mt-2 text-sm text-muted-foreground">
           Something went wrong on our end. You can try refreshing or head back home.
         </p>
-        <div className="mt-6 flex flex-wrap justify-center gap-2">
+        <div className="mt-8 flex flex-wrap justify-center gap-3">
           <button
             onClick={() => {
               router.invalidate();
               reset();
             }}
-            className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+            className="inline-flex items-center justify-center rounded-full bg-primary px-6 py-2.5 text-sm font-medium text-primary-foreground shadow-sm transition-colors hover:bg-primary/90"
           >
             Try again
           </button>
-          <a
-            href="/"
-            className="inline-flex items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent"
+          <Link
+            to="/"
+            className="inline-flex items-center justify-center rounded-full border px-6 py-2.5 text-sm font-medium transition-colors hover:bg-muted"
           >
             Go home
-          </a>
+          </Link>
         </div>
       </div>
     </div>
