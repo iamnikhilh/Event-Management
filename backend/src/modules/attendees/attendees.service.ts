@@ -107,11 +107,11 @@ export class AttendeesService {
     const { page, limit, search, status } = query;
     const offset = (page - 1) * limit;
 
-    const filterConditions: (typeof eq | typeof or)[] = [];
-    filterConditions.push(eq(attendees.eventId, eventId));
+    // Build where clause dynamically
+    const conditions: any[] = [eq(attendees.eventId, eventId)];
 
     if (search) {
-      filterConditions.push(
+      conditions.push(
         or(
           ilike(attendees.fullName, `%${search}%`),
           ilike(attendees.email, `%${search}%`),
@@ -120,10 +120,10 @@ export class AttendeesService {
     }
 
     if (status) {
-      filterConditions.push(eq(attendees.status, status));
+      conditions.push(eq(attendees.status, status));
     }
 
-    const whereClause = and(...(filterConditions as any[]));
+    const whereClause = and(...conditions);
 
     const [{ totalItems }] = await this.db
       .select({ totalItems: count() })
