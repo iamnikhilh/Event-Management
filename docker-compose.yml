@@ -2,7 +2,7 @@ version: '3.9'
 
 services:
   backend-api:
-    image: eventmanagement/backend-api:${IMAGE_TAG:-latest}
+    image: ${DOCKER_HUB_USERNAME}/backend-api:${IMAGE_TAG:-latest}
     env_file:
       - backend/.env
     environment:
@@ -16,7 +16,7 @@ services:
     restart: unless-stopped
 
   frontend-portal:
-    image: eventmanagement/frontend-portal:${IMAGE_TAG:-latest}
+    image: ${DOCKER_HUB_USERNAME}/frontend-portal:${IMAGE_TAG:-latest}
     env_file:
       - frontend/.env
     environment:

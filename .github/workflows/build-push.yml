@@ -28,8 +28,8 @@ jobs:
           file: ./backend/Dockerfile
           push: true
           tags: |
-            eventmanagement/backend-api:latest
-            eventmanagement/backend-api:${{ github.sha }}
+            ${{ secrets.DOCKER_HUB_USERNAME }}/backend-api:latest
+            ${{ secrets.DOCKER_HUB_USERNAME }}/backend-api:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
       
@@ -40,7 +40,7 @@ jobs:
           file: ./frontend/Dockerfile
           push: true
           tags: |
-            eventmanagement/frontend-portal:latest
-            eventmanagement/frontend-portal:${{ github.sha }}
+            ${{ secrets.DOCKER_HUB_USERNAME }}/frontend-portal:latest
+            ${{ secrets.DOCKER_HUB_USERNAME }}/frontend-portal:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
