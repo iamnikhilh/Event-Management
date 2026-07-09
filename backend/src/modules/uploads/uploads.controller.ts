@@ -43,7 +43,7 @@ export class UploadsController {
       limits: { fileSize: 5 * 1024 * 1024 },
     }),
   )
-  upload(@UploadedFile() file: Express.Multer.File) {
+  async upload(@UploadedFile() file: Express.Multer.File) {
     return this.uploadsService.saveUploadedFile(file);
   }
 
@@ -51,8 +51,8 @@ export class UploadsController {
   @Public()
   @SkipResponseEnvelope()
   @Header('Cache-Control', 'public, max-age=31536000, immutable')
-  getFile(@Param('filename') filename: string): StreamableFile {
-    const stream = this.uploadsService.openFile(filename);
+  async getFile(@Param('filename') filename: string): Promise<StreamableFile> {
+    const stream = await this.uploadsService.openFile(filename);
     return new StreamableFile(stream, {
       type: this.uploadsService.mimeTypeFor(filename),
       disposition: 'inline',

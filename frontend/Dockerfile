@@ -3,39 +3,31 @@ FROM node:22-alpine AS builder
 
 WORKDIR /app
 
-# Copy package files
-COPY package*.json ./
+ARG VITE_API_BASE_URL
+ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
 
-# Install dependencies
+COPY package*.json ./
 RUN npm install && npm cache clean --force
 
-# Copy source code
 COPY . .
-
-# Build application
 RUN npm run build
 
-# Production stage - lightweight nginx
+# Production stage
 FROM nginx:alpine
 
-# Remove default nginx config
+ENV API_BASE_URL=""
+
 RUN rm -rf /etc/nginx/conf.d/*
 
-# Copy custom nginx config
 COPY nginx.conf /etc/nginx/conf.d/default.conf
-
-# Copy built application from builder
 COPY --from=builder /app/dist /usr/share/nginx/html
+COPY docker-entrypoint.sh /docker-entrypoint.sh
+RUN chmod +x /docker-entrypoint.sh && rm -rf /var/cache/nginx /var/log/nginx/*
 
-# Clean up nginx cache to reduce size
-RUN rm -rf /var/cache/nginx /var/log/nginx/*
-
-# Expose port
 EXPOSE 5173
 
-# Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
   CMD wget --quiet --tries=1 --spider http://localhost:5173/ || exit 1
 
-# Start nginx
+ENTRYPOINT ["/docker-entrypoint.sh"]
 CMD ["nginx", "-g", "daemon off;"]
